@@ -1,0 +1,79 @@
+# TradePulse Nginx Configuration Example
+# This is a reference configuration for the external proxy server
+# Routes HTTPS (443) to internal non-standard ports (4000, 9000)
+
+# Frontend - tradepulse.drivenw.com
+server {
+    listen 443 ssl http2;
+    server_name tradepulse.drivenw.com;
+
+    ssl_certificate /path/to/ssl/cert.pem;
+    ssl_certificate_key /path/to/ssl/key.pem;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    location / {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# API - api.tradepulse.drivenw.com
+server {
+    listen 443 ssl http2;
+    server_name api.tradepulse.drivenw.com;
+
+    ssl_certificate /path/to/ssl/cert.pem;
+    ssl_certificate_key /path/to/ssl/key.pem;
+
+    # Security headers
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Increase upload size for file attachments
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://localhost:9000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # CORS headers (if not handled by application)
+        # add_header Access-Control-Allow-Origin "https://tradepulse.drivenw.com" always;
+        # add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        # add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+        # add_header Access-Control-Allow-Credentials "true" always;
+    }
+
+    # Handle preflight requests
+    location @options {
+        add_header Access-Control-Allow-Origin "https://tradepulse.drivenw.com" always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+        add_header Access-Control-Allow-Credentials "true" always;
+        add_header Content-Length 0;
+        add_header Content-Type text/plain;
+        return 204;
+    }
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    server_name tradepulse.drivenw.com api.tradepulse.drivenw.com;
+    return 301 https://$host$request_uri;
+}

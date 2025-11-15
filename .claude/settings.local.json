@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "WebSearch",
+      "WebFetch(domain:help.chartlog.com)",
+      "WebFetch(domain:edgewonk.zendesk.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,223 @@
+import { PUBLIC_API_URL } from '$env/static/public';
+
+const BASE_URL = PUBLIC_API_URL || 'https://api.tradepulse.drivenw.com:9000';
+
+interface APIResponse<T> {
+	success: boolean;
+	data?: T;
+	error?: {
+		code: string;
+		message: string;
+	};
+}
+
+class APIClient {
+	private getAuthToken(): string | null {
+		if (typeof window === 'undefined') return null;
+		return localStorage.getItem('auth_token');
+	}
+
+	private setAuthToken(token: string): void {
+		if (typeof window === 'undefined') return;
+		localStorage.setItem('auth_token', token);
+	}
+
+	private removeAuthToken(): void {
+		if (typeof window === 'undefined') return;
+		localStorage.removeItem('auth_token');
+	}
+
+	// Public method to check if user is authenticated
+	public getToken(): string | null {
+		return this.getAuthToken();
+	}
+
+	async request<T>(
+		endpoint: string,
+		options?: RequestInit
+	): Promise<T> {
+		const token = this.getAuthToken();
+
+		const response = await fetch(`${BASE_URL}${endpoint}`, {
+			...options,
+			headers: {
+				'Content-Type': 'application/json',
+				...(token && { Authorization: `Bearer ${token}` }),
+				...options?.headers
+			}
+		});
+
+		const result: APIResponse<T> = await response.json();
+
+		if (!result.success) {
+			throw new Error(result.error?.message || 'API request failed');
+		}
+
+		return result.data as T;
+	}
+
+	// Auth methods
+	async requestMagicLink(email: string): Promise<{ message: string }> {
+		return this.request('/api/auth/request-magic-link', {
+			method: 'POST',
+			body: JSON.stringify({ email })
+		});
+	}
+
+	async verifyMagicLink(token: string): Promise<{ jwt: string; user: any }> {
+		const result = await this.request<{ jwt: string; user: any }>(
+			`/api/auth/verify?token=${token}`
+		);
+		this.setAuthToken(result.jwt);
+		return result;
+	}
+
+	async logout(): Promise<void> {
+		await this.request('/api/auth/logout', { method: 'POST' });
+		this.removeAuthToken();
+	}
+
+	// Trade methods
+	async getTrades(params?: {
+		limit?: number;
+		offset?: number;
+		from?: string;
+		to?: string;
+		symbol?: string;
+	}): Promise<any[]> {
+		const query = new URLSearchParams(params as any).toString();
+		const result = await this.request<any[]>(`/api/trades${query ? '?' + query : ''}`);
+		return result || [];
+	}
+
+	async createTrade(trade: any): Promise<any> {
+		return this.request('/api/trades', {
+			method: 'POST',
+			body: JSON.stringify(trade)
+		});
+	}
+
+	async updateTrade(id: string, trade: any): Promise<any> {
+		return this.request(`/api/trades/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(trade)
+		});
+	}
+
+	async deleteTrade(id: string): Promise<void> {
+		return this.request(`/api/trades/${id}`, {
+			method: 'DELETE'
+		});
+	}
+
+	// Position lifecycle methods
+	async addEntry(tradeId: string, entry: any): Promise<any> {
+		return this.request(`/api/trades/${tradeId}/entries`, {
+			method: 'POST',
+			body: JSON.stringify(entry)
+		});
+	}
+
+	async addExit(tradeId: string, exit: any): Promise<any> {
+		return this.request(`/api/trades/${tradeId}/exits`, {
+			method: 'POST',
+			body: JSON.stringify(exit)
+		});
+	}
+
+	// Journal methods
+	async getJournalEntries(params?: {
+		limit?: number;
+		offset?: number;
+	}): Promise<{ entries: any[]; total: number }> {
+		const query = new URLSearchParams(params as any).toString();
+		return this.request(`/api/journal?${query}`);
+	}
+
+	async createJournalEntry(entry: any): Promise<any> {
+		return this.request('/api/journal', {
+			method: 'POST',
+			body: JSON.stringify(entry)
+		});
+	}
+
+	// Metrics methods
+	async getSummaryMetrics(): Promise<any> {
+		return this.request('/api/metrics/summary');
+	}
+
+	async getAnalytics(timeRange?: string): Promise<any> {
+		const query = timeRange ? `?range=${timeRange}` : '';
+		return this.request(`/api/metrics/analytics${query}`);
+	}
+
+	// Rule Set methods
+	async getRuleSets(): Promise<any[]> {
+		return this.request('/api/rulesets');
+	}
+
+	async createRuleSet(ruleSet: any): Promise<any> {
+		return this.request('/api/rulesets', {
+			method: 'POST',
+			body: JSON.stringify(ruleSet)
+		});
+	}
+
+	async updateRuleSet(id: string, ruleSet: any): Promise<any> {
+		return this.request(`/api/rulesets/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(ruleSet)
+		});
+	}
+
+	async deleteRuleSet(id: string): Promise<void> {
+		return this.request(`/api/rulesets/${id}`, {
+			method: 'DELETE'
+		});
+	}
+
+	async addRule(ruleSetId: string, rule: any): Promise<any> {
+		return this.request(`/api/rulesets/${ruleSetId}/rules`, {
+			method: 'POST',
+			body: JSON.stringify(rule)
+		});
+	}
+
+	async updateRule(ruleSetId: string, ruleId: string, rule: any): Promise<any> {
+		return this.request(`/api/rulesets/${ruleSetId}/rules/${ruleId}`, {
+			method: 'PUT',
+			body: JSON.stringify(rule)
+		});
+	}
+
+	async deleteRule(ruleSetId: string, ruleId: string): Promise<void> {
+		return this.request(`/api/rulesets/${ruleSetId}/rules/${ruleId}`, {
+			method: 'DELETE'
+		});
+	}
+
+	// File upload methods
+	async uploadFile(file: File, type: 'screenshot' | 'voice'): Promise<{ url: string }> {
+		const formData = new FormData();
+		formData.append('file', file);
+		formData.append('type', type);
+
+		const token = this.getAuthToken();
+		const response = await fetch(`${BASE_URL}/api/upload`, {
+			method: 'POST',
+			headers: {
+				...(token && { Authorization: `Bearer ${token}` })
+			},
+			body: formData
+		});
+
+		const result = await response.json();
+		if (!result.success) {
+			throw new Error(result.error?.message || 'Upload failed');
+		}
+
+		return result.data;
+	}
+}
+
+export const apiClient = new APIClient();

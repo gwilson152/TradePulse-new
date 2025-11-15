@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Skeleton theme styles */
+@layer base {
+	:root {
+		/* Trading-specific CSS variables */
+		--profit-color: theme('colors.profit.500');
+		--loss-color: theme('colors.loss.500');
+	}
+}
+
+/* Custom utilities for trading */
+@layer utilities {
+	.text-profit {
+		color: var(--profit-color);
+	}
+
+	.text-loss {
+		color: var(--loss-color);
+	}
+
+	.bg-profit {
+		background-color: var(--profit-color);
+	}
+
+	.bg-loss {
+		background-color: var(--loss-color);
+	}
+}
+
+/* Global styles */
+html,
+body {
+	@apply h-full overflow-hidden;
+}
+
+body {
+	@apply bg-surface-50 dark:bg-surface-900;
+}
