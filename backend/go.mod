@@ -1,6 +1,6 @@
 module github.com/tradepulse/api
 
-go 1.21
+go 1.24.0
 
 require (
 	github.com/go-chi/chi/v5 v5.0.11
@@ -12,4 +12,7 @@ require (
 	github.com/lib/pq v1.10.9
 )
 
-require golang.org/x/net v0.17.0 // indirect
+require (
+	golang.org/x/crypto v0.44.0 // indirect
+	golang.org/x/net v0.46.0 // indirect
+)

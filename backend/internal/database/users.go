@@ -14,12 +14,13 @@ import (
 func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
 	var lastLogin sql.NullTime
+	var passwordHash sql.NullString
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, email, created_at, last_login
+		SELECT id, email, COALESCE(password_hash, '') as password_hash, created_at, last_login
 		FROM users
 		WHERE email = $1
-	`, email).Scan(&user.ID, &user.Email, &user.CreatedAt, &lastLogin)
+	`, email).Scan(&user.ID, &user.Email, &passwordHash, &user.CreatedAt, &lastLogin)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -30,6 +31,11 @@ func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, e
 
 	if lastLogin.Valid {
 		user.LastLogin = &lastLogin.Time
+	}
+
+	if passwordHash.Valid && passwordHash.String != "" {
+		user.PasswordHash = passwordHash.String
+		user.HasPassword = true
 	}
 
 	return &user, nil
@@ -39,12 +45,13 @@ func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, e
 func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var user models.User
 	var lastLogin sql.NullTime
+	var passwordHash sql.NullString
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, email, created_at, last_login
+		SELECT id, email, COALESCE(password_hash, '') as password_hash, created_at, last_login
 		FROM users
 		WHERE id = $1
-	`, id).Scan(&user.ID, &user.Email, &user.CreatedAt, &lastLogin)
+	`, id).Scan(&user.ID, &user.Email, &passwordHash, &user.CreatedAt, &lastLogin)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -55,6 +62,11 @@ func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, erro
 
 	if lastLogin.Valid {
 		user.LastLogin = &lastLogin.Time
+	}
+
+	if passwordHash.Valid && passwordHash.String != "" {
+		user.PasswordHash = passwordHash.String
+		user.HasPassword = true
 	}
 
 	return &user, nil
@@ -156,4 +168,50 @@ func (db *DB) VerifyMagicLinkToken(ctx context.Context, token string) (uuid.UUID
 	}
 
 	return userID, nil
+}
+
+// SetUserPassword sets or updates a user's password hash
+func (db *DB) SetUserPassword(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE users
+		SET password_hash = $1
+		WHERE id = $2
+	`, passwordHash, userID)
+
+	if err != nil {
+		return fmt.Errorf("failed to set password: %w", err)
+	}
+
+	return nil
+}
+
+// VerifyUserPassword retrieves the password hash for a user to verify against
+func (db *DB) VerifyUserPassword(ctx context.Context, email string, passwordHash string) (*models.User, error) {
+	var user models.User
+	var lastLogin sql.NullTime
+	var storedHash sql.NullString
+
+	err := db.QueryRowContext(ctx, `
+		SELECT id, email, password_hash, created_at, last_login
+		FROM users
+		WHERE email = $1 AND password_hash IS NOT NULL
+	`, email).Scan(&user.ID, &user.Email, &storedHash, &user.CreatedAt, &lastLogin)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user not found or no password set")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if lastLogin.Valid {
+		user.LastLogin = &lastLogin.Time
+	}
+
+	if storedHash.Valid {
+		user.PasswordHash = storedHash.String
+		user.HasPassword = true
+	}
+
+	return &user, nil
 }

@@ -72,6 +72,7 @@ export interface EmotionalState {
 export interface User {
 	id: string;
 	email: string;
+	has_password: boolean;
 	created_at: string;
 	last_login: string;
 }

@@ -12,9 +12,13 @@
 	import { apiClient } from '$lib/api/client';
 	import { goto } from '$app/navigation';
 	import { toast } from '$lib/stores/toast';
+	import { userStore } from '$lib/stores/user';
+	import SetPasswordModal from '$lib/components/settings/SetPasswordModal.svelte';
 	import type { Rule, RulePhase, RuleCategory } from '$lib/types';
 
 	let activeTab = $state('profile');
+	let showPasswordModal = $state(false);
+	let currentUser = $state($userStore.user);
 
 	// Mock rules data - replace with API call
 	let rules = $state<Rule[]>([
@@ -191,6 +195,17 @@
 			console.error('Logout error:', err);
 		} finally {
 			goto('/auth/login');
+		}
+	}
+
+	async function handlePasswordUpdate() {
+		// Refresh user data after password is set
+		try {
+			const user = await apiClient.getCurrentUser();
+			currentUser = user;
+			userStore.setUser(user);
+		} catch (err) {
+			console.error('Failed to refresh user:', err);
 		}
 	}
 </script>
@@ -462,6 +477,27 @@
 
 		{#if activeTab === 'account'}
 			<Card>
+				<FormSection title="Security" icon="mdi:shield-lock">
+					<div class="space-y-6 max-w-md">
+						<div>
+							<h3 class="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-200">Password</h3>
+							<p class="text-slate-600 dark:text-slate-400 mb-4">
+								{#if currentUser?.has_password}
+									Change your password for signing in
+								{:else}
+									Set a password to enable quick sign-in without magic links
+								{/if}
+							</p>
+							<Button variant="soft" color="primary" onclick={() => (showPasswordModal = true)}>
+								<Icon icon="mdi:key" width="20" />
+								{currentUser?.has_password ? 'Change Password' : 'Set Password'}
+							</Button>
+						</div>
+					</div>
+				</FormSection>
+			</Card>
+
+			<Card>
 				<FormSection title="Account Actions" icon="mdi:account-cog">
 					<div class="space-y-6 max-w-md">
 						<div>
@@ -491,3 +527,11 @@
 		{/if}
 	</TabContainer>
 </div>
+
+<!-- Password Setup Modal -->
+<SetPasswordModal
+	open={showPasswordModal}
+	hasPassword={currentUser?.has_password || false}
+	onClose={() => (showPasswordModal = false)}
+	onSuccess={handlePasswordUpdate}
+/>

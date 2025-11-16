@@ -181,6 +181,36 @@
 			}
 		},
 		{
+			"label": "Run Password Migration",
+			"type": "shell",
+			"command": "psql",
+			"args": [
+				"-h",
+				"postgres1.drivenw.local",
+				"-p",
+				"5432",
+				"-U",
+				"tradepulse",
+				"-d",
+				"tradepulse",
+				"-f",
+				"migrations/002_add_password_auth.up.sql"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend",
+				"env": {
+					"PGPASSWORD": "drv13llc!"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			}
+		},
+		{
 			"label": "Test Backend",
 			"type": "shell",
 			"command": "go",

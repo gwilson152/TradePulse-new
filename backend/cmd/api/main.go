@@ -141,6 +141,7 @@ func main() {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/request-magic-link", handlers.RequestMagicLink(app.db, app.logger))
 			r.Get("/verify", handlers.VerifyMagicLink(app.db, app.logger, cfg.jwtSecret, cfg.jwtExpiry))
+			r.Post("/login", handlers.LoginWithPassword(app.db, app.logger, cfg.jwtSecret, cfg.jwtExpiry))
 		})
 
 		// Protected routes (auth required)
@@ -148,6 +149,8 @@ func main() {
 			r.Use(appMiddleware.Authenticate(cfg.jwtSecret))
 
 			// Auth
+			r.Get("/auth/me", handlers.GetCurrentUser(app.db, app.logger))
+			r.Post("/auth/set-password", handlers.SetPassword(app.db, app.logger))
 			r.Post("/auth/logout", handlers.Logout(app.logger))
 			r.Post("/auth/refresh", handlers.RefreshToken(app.logger, cfg.jwtSecret, cfg.jwtExpiry))
 

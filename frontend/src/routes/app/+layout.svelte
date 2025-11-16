@@ -7,11 +7,14 @@
 	import UserMenu from '$lib/components/ui/UserMenu.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import { apiClient } from '$lib/api/client';
+	import { userStore, getUserInitials, getDisplayName } from '$lib/stores/user';
+	import type { User } from '$lib/types';
 
 	let { children } = $props();
 
 	let isAuthenticated = $state(false);
 	let currentTime = $state(new Date());
+	let currentUser = $state<User | null>(null);
 
 	onMount(async () => {
 		// Check if user has valid JWT token
@@ -20,6 +23,27 @@
 			goto('/auth/login');
 			return;
 		}
+
+		// Fetch current user (if endpoint is available)
+		try {
+			const user = await apiClient.getCurrentUser();
+			currentUser = user;
+			userStore.setUser(user);
+		} catch (error) {
+			console.warn('Could not fetch user details from API, using JWT token data:', error);
+			// Fallback: extract user info from JWT token
+			const payload = apiClient.getTokenPayload();
+			if (payload && payload.email) {
+				currentUser = {
+					id: payload.user_id || '',
+					email: payload.email,
+					created_at: '',
+					last_login: ''
+				};
+				userStore.setUser(currentUser);
+			}
+		}
+
 		isAuthenticated = true;
 
 		// Update time every minute
@@ -76,7 +100,11 @@
 			<!-- Right: Notifications & User -->
 			<div class="flex items-center gap-3">
 				<NotificationBell />
-				<UserMenu userName="User" userInitials="U" />
+				<UserMenu
+					userName={getDisplayName(currentUser)}
+					userEmail={currentUser?.email}
+					userInitials={getUserInitials(currentUser)}
+				/>
 			</div>
 		</div>
 

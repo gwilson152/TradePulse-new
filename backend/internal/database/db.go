@@ -84,6 +84,26 @@ func (db *DB) RunMigrations() error {
 		}
 	}
 
+	// Check if migration 002 has been applied
+	err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE version = 2").Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check migrations: %w", err)
+	}
+
+	// If migration hasn't been applied, run it
+	if count == 0 {
+		err = db.executeMigration002()
+		if err != nil {
+			return fmt.Errorf("failed to run migration 002: %w", err)
+		}
+
+		// Mark migration as applied
+		_, err = db.Exec("INSERT INTO schema_migrations (version) VALUES (2)")
+		if err != nil {
+			return fmt.Errorf("failed to mark migration as applied: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -138,6 +158,19 @@ func (db *DB) executeMigration001() error {
 		CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);
 		CREATE INDEX IF NOT EXISTS idx_trades_opened_at ON trades(opened_at);
 		CREATE INDEX IF NOT EXISTS idx_trades_closed_at ON trades(closed_at);
+	`
+
+	_, err := db.Exec(migrationSQL)
+	return err
+}
+
+func (db *DB) executeMigration002() error {
+	migrationSQL := `
+		-- Add password authentication to users table
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+		-- Add index for faster password lookups
+		CREATE INDEX IF NOT EXISTS idx_users_email_password ON users(email) WHERE password_hash IS NOT NULL;
 	`
 
 	_, err := db.Exec(migrationSQL)

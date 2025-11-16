@@ -32,6 +32,26 @@ class APIClient {
 		return this.getAuthToken();
 	}
 
+	// Decode JWT token to get user info (without verification)
+	public getTokenPayload(): any | null {
+		const token = this.getAuthToken();
+		if (!token) return null;
+
+		try {
+			// JWT format: header.payload.signature
+			const parts = token.split('.');
+			if (parts.length !== 3) return null;
+
+			// Decode the payload (base64url)
+			const payload = parts[1];
+			const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+			return JSON.parse(decoded);
+		} catch (error) {
+			console.error('Failed to decode JWT:', error);
+			return null;
+		}
+	}
+
 	async request<T>(
 		endpoint: string,
 		options?: RequestInit
@@ -75,6 +95,29 @@ class APIClient {
 	async logout(): Promise<void> {
 		await this.request('/api/auth/logout', { method: 'POST' });
 		this.removeAuthToken();
+	}
+
+	async getCurrentUser(): Promise<any> {
+		return this.request('/api/auth/me');
+	}
+
+	async setPassword(password: string): Promise<{ message: string }> {
+		return this.request('/api/auth/set-password', {
+			method: 'POST',
+			body: JSON.stringify({ password })
+		});
+	}
+
+	async loginWithPassword(email: string, password: string): Promise<{ jwt: string; user: any }> {
+		const result = await this.request<{ jwt: string; user: any }>(
+			'/api/auth/login',
+			{
+				method: 'POST',
+				body: JSON.stringify({ email, password })
+			}
+		);
+		this.setAuthToken(result.jwt);
+		return result;
 	}
 
 	// Trade methods
