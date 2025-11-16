@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import Icon from '@iconify/svelte';
 	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
+	import UserMenu from '$lib/components/ui/UserMenu.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import { apiClient } from '$lib/api/client';
 
@@ -75,9 +76,7 @@
 			<!-- Right: Notifications & User -->
 			<div class="flex items-center gap-3">
 				<NotificationBell />
-				<button class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold shadow-sm hover:shadow-md transition-shadow">
-					U
-				</button>
+				<UserMenu userName="User" userInitials="U" />
 			</div>
 		</div>
 

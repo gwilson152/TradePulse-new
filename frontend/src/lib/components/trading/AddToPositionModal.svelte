@@ -156,10 +156,11 @@
 		/>
 
 		<div>
-			<label class="block text-sm font-medium mb-1 text-surface-700 dark:text-surface-300">
+			<label for="position-notes" class="block text-sm font-medium mb-1 text-surface-700 dark:text-surface-300">
 				Notes
 			</label>
 			<textarea
+				id="position-notes"
 				bind:value={formData.notes}
 				class="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-surface-50 dark:bg-surface-800 text-surface-900 dark:text-surface-100"
 				rows="3"

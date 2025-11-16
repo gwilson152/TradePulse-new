@@ -132,6 +132,8 @@ func main() {
 
 	// Initialize handlers
 	tradesHandler := handlers.NewTradesHandler(app.db, app.notificationBus)
+	tagsHandler := handlers.NewTagsHandler(app.db)
+	csvImportHandler := handlers.NewCSVImportHandler(app.db, app.notificationBus)
 
 	// API routes
 	r.Route("/api", func(r chi.Router) {
@@ -155,7 +157,7 @@ func main() {
 			r.Get("/trades/{id}", tradesHandler.GetTrade)
 			r.Put("/trades/{id}", tradesHandler.UpdateTrade)
 			r.Delete("/trades/{id}", tradesHandler.DeleteTrade)
-			r.Post("/trades/import-csv", handlers.ImportCSV(app.db, app.logger))
+			r.Post("/trades/import-csv", csvImportHandler.ImportCSV)
 
 			// Trade tags
 			r.Post("/trades/{id}/tags", tradesHandler.AddTagToTrade)
@@ -174,8 +176,11 @@ func main() {
 			r.Delete("/attachments/{id}", handlers.DeleteAttachment(app.db, app.logger))
 
 			// Tags
-			r.Get("/tags", handlers.ListTags(app.db, app.logger))
-			r.Post("/tags", handlers.CreateTag(app.db, app.logger))
+			r.Get("/tags", tagsHandler.ListTags)
+			r.Post("/tags", tagsHandler.CreateTag)
+			r.Get("/tags/{id}", tagsHandler.GetTag)
+			r.Put("/tags/{id}", tagsHandler.UpdateTag)
+			r.Delete("/tags/{id}", tagsHandler.DeleteTag)
 
 			// Metrics
 			r.Get("/metrics/summary", handlers.GetSummaryMetrics(app.db, app.logger))

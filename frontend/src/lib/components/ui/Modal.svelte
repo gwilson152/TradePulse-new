@@ -33,9 +33,8 @@
 		<div class="relative min-h-screen flex items-center justify-center p-4">
 			<div
 				class="modal card {sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto"
-				onclick={(e) => e.stopPropagation()}
-				onkeydown={() => {}}
-				role="document"
+				role="dialog"
+				aria-modal="true"
 			>
 				{#if title}
 					<header class="modal-header flex items-center justify-between p-6 border-b border-surface-200 dark:border-surface-700">

@@ -31,11 +31,11 @@
 	let error = $state('');
 	let importing = $state(false);
 
-	const tabs = [
+	const tabs = $derived([
 		{ id: 'upload', label: 'Upload', icon: 'mdi:upload' },
-		{ id: 'preview', label: 'Preview', icon: 'mdi:eye', isComplete: $derived(importResult !== null) },
+		{ id: 'preview', label: 'Preview', icon: 'mdi:eye', isComplete: importResult !== null },
 		{ id: 'results', label: 'Results', icon: 'mdi:check-circle', isComplete: false }
-	];
+	]);
 
 	const platformOptions = $derived(
 		platforms.map((p) => ({

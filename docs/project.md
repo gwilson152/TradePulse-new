@@ -15,6 +15,7 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
 ### What Makes TradePulse Unique
 
 1. **Position Lifecycle Management**
+
    - Track multiple entries and exits per position
    - Scale in/out with precision tracking
    - Visual timeline of all position events
@@ -22,6 +23,7 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
    - Real-time P&L calculation (realized vs unrealized)
 
 2. **Rule-Based Trading Discipline**
+
    - Create custom rule sets for different strategies
    - Traffic light scoring system (0-100% with 5 levels)
    - Weighted rule importance (1-5 stars)
@@ -29,6 +31,7 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
    - Visual adherence tracking and correlation analysis
 
 3. **Comprehensive Journaling**
+
    - Rich text reflection entries
    - Emotional state tracking (Confidence, Stress, Discipline)
    - Screenshot uploads with lightbox viewer
@@ -37,6 +40,7 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
    - Automatic weighted adherence score calculation
 
 4. **Advanced Analytics**
+
    - 6 interactive ECharts visualizations
    - Correlation analysis (emotions vs P&L, rules vs performance)
    - Time-series P&L tracking
@@ -59,22 +63,26 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
 ### Frontend
 
 **Framework & Core:**
+
 - **Svelte 5.0** - Latest version with runes ($state, $derived, $props)
 - **SvelteKit 2.0** - Full-stack framework with SSR and routing
 - **TypeScript 5.x** - Full type safety throughout
 - **Vite 5.0** - Lightning-fast build tool
 
 **Styling:**
+
 - **Tailwind CSS 3.4** - Utility-first CSS framework
 - **Skeleton UI 2.11** - Component foundation (minimal usage)
 - **Custom Design System** - Glassmorphism with gradients
 
 **Libraries:**
+
 - **Apache ECharts 5.x** - Interactive charts and visualizations
 - **Iconify** - Icon system with Material Design Icons (outline style)
 - **MediaRecorder API** - Native browser voice recording
 
 **Key Frontend Features:**
+
 - Glassmorphism design with backdrop blur
 - Responsive breakpoints (mobile-first approach)
 - Full accessibility (WCAG AA compliant)
@@ -86,33 +94,42 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
 ### Backend
 
 **Runtime & Framework:**
-- **Node.js 18+** - JavaScript runtime
-- **Express.js** - Minimal web framework
-- **TypeScript** - Type-safe backend code
+
+- **Go 1.21+** - High-performance compiled language
+- **chi v5** - Lightweight, composable HTTP router
+- **database/sql** - Standard library database interface
+- **lib/pq** - PostgreSQL driver
 
 **Database:**
+
 - **PostgreSQL 15+** - Primary relational database
-- **pg** - PostgreSQL client for Node.js
 - **Database Host:** postgres1.drivenw.local:5432
 - **Database Name:** tradepulse
+- **Connection pooling** - 25 max open, 5 max idle connections
+- **Automatic migrations** - Embedded migration system
 
 **Authentication:**
+
 - **Passwordless magic links** via email
-- **JWT tokens** for session management
-- **bcrypt** for secure token hashing
+- **JWT tokens** (golang-jwt/jwt) for session management
+- **Cryptographically secure** token generation
 - **15-minute expiry** on magic links
-- **24-hour expiry** on JWTs
+- **24-hour expiry** on JWTs (configurable)
 
 **Real-time Communication:**
-- **WebSocket (ws)** - Live notifications
-- **Event-driven architecture** for updates
+
+- **WebSocket** (gorilla/websocket) - Live notifications
+- **Event-driven architecture** - Central notification bus
+- **Multi-client support** - Per-user notification channels
 
 **Email Delivery:**
+
 - **Nodemailer** - Email client
 - **SMTP Support** - Multiple provider support
 - **Trusted relay** for internal networks
 
 **File Storage:**
+
 - **Local file system** for uploads
 - **URL-based access** for screenshots and voice notes
 - **10MB max file size** limit
@@ -124,24 +141,28 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
 ### Deployment Architecture
 
 **Frontend:**
+
 - URL: https://tradepulse.drivenw.com
 - Internal Port: 4000
 - External Proxy: HTTPS (443) → Internal (4000)
 - Framework: SvelteKit (Node adapter)
 
 **Backend API:**
+
 - URL: https://api.tradepulse.drivenw.com
 - Internal Port: 9000
 - External Proxy: HTTPS (443) → Internal (9000)
 - Framework: Express.js
 
 **Database:**
+
 - Host: postgres1.drivenw.local:5432
 - Database: tradepulse
 - User: tradepulse
 - Version: PostgreSQL 15+
 
 **Email Options:**
+
 1. SMTP with trusted relay
 2. Microsoft 365 Graph API
 3. Google Workspace API
@@ -153,6 +174,7 @@ TradePulse is a modern, full-stack trading journal and analytics platform design
 ### Core Tables
 
 **users**
+
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -164,6 +186,7 @@ CREATE TABLE users (
 ```
 
 **trades**
+
 ```sql
 CREATE TABLE trades (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -194,6 +217,7 @@ CREATE TABLE trades (
 ```
 
 **journal_entries**
+
 ```sql
 CREATE TABLE journal_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -219,6 +243,7 @@ CREATE TABLE journal_entries (
 ```
 
 **rule_sets**
+
 ```sql
 CREATE TABLE rule_sets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -233,6 +258,7 @@ CREATE TABLE rule_sets (
 ```
 
 **magic_links**
+
 ```sql
 CREATE TABLE magic_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -247,6 +273,7 @@ CREATE TABLE magic_links (
 ### JSONB Structures
 
 **Entry (in trades.entries)**
+
 ```typescript
 {
   id: string;
@@ -259,6 +286,7 @@ CREATE TABLE magic_links (
 ```
 
 **Exit (in trades.exits)**
+
 ```typescript
 {
   id: string;
@@ -272,34 +300,43 @@ CREATE TABLE magic_links (
 ```
 
 **Rule (in rule_sets.rules)**
+
 ```typescript
 {
   id: string;
   title: string;
   description: string;
-  weight: number;  // 1-5
-  phase: 'PRE_TRADE' | 'DURING_TRADE' | 'POST_TRADE';
-  category: 'RISK_MANAGEMENT' | 'ENTRY' | 'EXIT' | 'POSITION_SIZING' | 'TIMING' | 'PSYCHOLOGY' | 'GENERAL';
+  weight: number; // 1-5
+  phase: "PRE_TRADE" | "DURING_TRADE" | "POST_TRADE";
+  category: "RISK_MANAGEMENT" |
+    "ENTRY" |
+    "EXIT" |
+    "POSITION_SIZING" |
+    "TIMING" |
+    "PSYCHOLOGY" |
+    "GENERAL";
   created_at: string;
 }
 ```
 
 **EmotionalState (in journal_entries.emotional_state)**
+
 ```typescript
 {
-  confidence: number;  // 1-10
-  stress: number;      // 1-10
-  discipline: number;  // 1-10
+  confidence: number; // 1-10
+  stress: number; // 1-10
+  discipline: number; // 1-10
   notes: string;
 }
 ```
 
 **RuleAdherence (in journal_entries.rule_adherence)**
+
 ```typescript
 {
   rule_id: string;
   rule_title: string;
-  score: number;  // 0, 25, 50, 75, 100
+  score: number; // 0, 25, 50, 75, 100
   notes: string;
   timestamp: string;
 }
@@ -310,12 +347,14 @@ CREATE TABLE magic_links (
 ## API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/request-magic-link` - Send magic link to email
 - `GET /api/auth/verify?token=...` - Verify magic link and return JWT
 - `POST /api/auth/logout` - Invalidate current JWT token
 - `POST /api/auth/refresh` - Refresh JWT before expiry
 
 ### Trades (Position Management)
+
 - `GET /api/trades` - List trades with pagination and filters
 - `GET /api/trades/:id` - Get single trade with full details
 - `POST /api/trades` - Create new trade/position
@@ -323,10 +362,12 @@ CREATE TABLE magic_links (
 - `DELETE /api/trades/:id` - Delete trade
 
 ### Position Lifecycle
+
 - `POST /api/trades/:id/entries` - Add entry to position (scale in)
 - `POST /api/trades/:id/exits` - Add exit to position (scale out)
 
 ### Journal Entries
+
 - `GET /api/journal` - List journal entries with pagination
 - `GET /api/journal/:id` - Get single journal entry
 - `POST /api/journal` - Create journal entry (supports multipart/form-data)
@@ -334,6 +375,7 @@ CREATE TABLE magic_links (
 - `DELETE /api/journal/:id` - Delete journal entry
 
 ### Rule Sets
+
 - `GET /api/rulesets` - List all rule sets for user
 - `GET /api/rulesets/:id` - Get single rule set
 - `POST /api/rulesets` - Create new rule set
@@ -344,15 +386,18 @@ CREATE TABLE magic_links (
 - `DELETE /api/rulesets/:rulesetId/rules/:ruleId` - Delete specific rule
 
 ### Analytics & Metrics
+
 - `GET /api/metrics/summary` - Overall performance summary
 - `GET /api/metrics/analytics?range=1M` - Time-series data for charts
 - `GET /api/metrics/by-symbol` - Performance breakdown by symbol
 - `GET /api/metrics/daily` - Daily performance data
 
 ### File Upload
+
 - `POST /api/upload` - Upload screenshot or voice note (multipart/form-data)
 
 ### WebSocket
+
 - `GET /api/ws?token=...` - Real-time notifications connection
 
 See [api-spec.md](./api-spec.md) for complete API documentation.
@@ -400,12 +445,14 @@ See [component-library.md](./frontend/component-library.md) for detailed compone
 ### Layout Architecture
 
 **macOS-Inspired Navigation:**
+
 - Top menu bar (44px) - App name, live clock, notifications, user avatar
 - Bottom dock (floating) - 5 main navigation items with colored icons
 - Main content area - Max-width 1800px, centered, scrollable
 - No traditional sidebar - unique approach
 
 **Color-Coded Sections:**
+
 - 🔵 **Overview** - Blue (`text-blue-500`)
 - 🟢 **Trades** - Emerald (`text-emerald-500`)
 - 🟣 **Journal** - Purple (`text-purple-500`)
@@ -415,6 +462,7 @@ See [component-library.md](./frontend/component-library.md) for detailed compone
 ### Visual Design
 
 **Glassmorphism:**
+
 ```css
 bg-white/60 dark:bg-slate-800/60
 backdrop-blur-xl
@@ -423,18 +471,21 @@ rounded-2xl
 ```
 
 **Gradient System:**
+
 - Icon backgrounds with matching colored shadows
 - Button gradients for emphasis
 - Text gradients for hero headers
 - Smooth color transitions
 
 **Icon Strategy:**
+
 - Outline style only (e.g., `mdi:chart-line-variant`)
 - Single color per icon (no multi-color)
 - Color-coded by section
 - 24px standard size in navigation
 
 **Shadows & Depth:**
+
 ```css
 /* Subtle */
 shadow-sm shadow-blue-500/30
@@ -547,6 +598,7 @@ TradePulse/
 ## Development Setup
 
 ### Prerequisites
+
 - **Node.js** 18+ with npm
 - **PostgreSQL** 15+
 - **Git** for version control
@@ -594,11 +646,13 @@ psql tradepulse < backend/src/database/migrations/001_initial_schema.sql
 ### Environment Variables
 
 **Frontend** (`frontend/.env`):
+
 ```env
 PUBLIC_API_URL=http://localhost:9000
 ```
 
 **Backend** (`backend/.env`):
+
 ```env
 # Server
 PORT=9000
@@ -639,6 +693,7 @@ UPLOAD_DIR=./uploads
 ### ✅ Completed
 
 **Frontend (100%):**
+
 - [x] macOS-inspired dock navigation layout
 - [x] Glassmorphism design system
 - [x] 22 accessible UI components
@@ -658,6 +713,7 @@ UPLOAD_DIR=./uploads
 - [x] All accessibility warnings fixed
 
 **Documentation:**
+
 - [x] Design system documentation
 - [x] Component library documentation
 - [x] API specification
@@ -666,6 +722,7 @@ UPLOAD_DIR=./uploads
 ### 🔄 In Progress
 
 **Backend (0%):**
+
 - [ ] Database schema implementation
 - [ ] Authentication endpoints
 - [ ] Trade CRUD operations
@@ -680,6 +737,7 @@ UPLOAD_DIR=./uploads
 ### 📋 Planned
 
 **Features:**
+
 - [ ] CSV import/export for trades
 - [ ] PDF report generation
 - [ ] Calendar view for trades
@@ -691,6 +749,7 @@ UPLOAD_DIR=./uploads
 - [ ] Mobile app (React Native)
 
 **Technical:**
+
 - [ ] Unit tests (frontend)
 - [ ] Integration tests (backend)
 - [ ] E2E tests (Playwright)
@@ -707,12 +766,14 @@ UPLOAD_DIR=./uploads
 **Decision:** Use arrays of entries and exits instead of single entry/exit fields.
 
 **Rationale:**
+
 - Supports real-world trading (scaling in/out)
 - Maintains complete position history
 - Enables timeline visualization
 - Allows accurate P&L tracking per exit
 
 **Trade-offs:**
+
 - More complex data structure
 - Requires calculation logic for averages
 - Higher storage for active traders
@@ -722,12 +783,14 @@ UPLOAD_DIR=./uploads
 **Decision:** 5-level scoring (0, 25, 50, 75, 100) with weighted averaging.
 
 **Rationale:**
+
 - Simple enough for quick input
 - Granular enough to measure progress
 - Weighted system accounts for rule importance
 - Color coding provides instant visual feedback
 
 **Trade-offs:**
+
 - Requires discipline to score honestly
 - Subjective scoring (not automated)
 
@@ -736,6 +799,7 @@ UPLOAD_DIR=./uploads
 **Decision:** Bottom dock instead of sidebar or top navigation.
 
 **Rationale:**
+
 - Unique, fresh UI that stands out
 - More screen space for content
 - Familiar pattern for macOS users
@@ -743,6 +807,7 @@ UPLOAD_DIR=./uploads
 - Accessible on all screen sizes
 
 **Trade-offs:**
+
 - Less conventional than sidebar
 - Requires user adaptation
 - Limited to ~5 primary nav items
@@ -752,12 +817,14 @@ UPLOAD_DIR=./uploads
 **Decision:** Semi-transparent cards with backdrop blur.
 
 **Rationale:**
+
 - Modern, premium aesthetic
 - Depth perception without heavy shadows
 - Works well in light and dark mode
 - Differentiates from competitors
 
 **Trade-offs:**
+
 - Browser compatibility (backdrop-filter)
 - Performance on low-end devices
 - May not be timeless (trend-dependent)
@@ -767,12 +834,14 @@ UPLOAD_DIR=./uploads
 **Decision:** Use PostgreSQL JSONB for entries, exits, and rules instead of separate tables.
 
 **Rationale:**
+
 - Simpler schema (fewer joins)
 - Faster reads (single query)
 - Flexible structure
 - Atomic updates for position lifecycle
 
 **Trade-offs:**
+
 - Harder to query individual entries
 - No foreign key constraints on nested data
 - Potential for data inconsistency
@@ -781,21 +850,22 @@ UPLOAD_DIR=./uploads
 
 ## Performance Targets
 
-| Metric | Target | Status |
-|--------|--------|--------|
-| **Lighthouse Performance** | 90+ | TBD |
-| **Lighthouse Accessibility** | 100 | ✅ (WCAG AA) |
-| **First Contentful Paint** | < 1.5s | TBD |
-| **Time to Interactive** | < 3s | TBD |
-| **API Response (p95)** | < 200ms | TBD |
-| **Database Query (p95)** | < 100ms | TBD |
-| **Bundle Size** | < 300KB (gzip) | TBD |
+| Metric                       | Target         | Status       |
+| ---------------------------- | -------------- | ------------ |
+| **Lighthouse Performance**   | 90+            | TBD          |
+| **Lighthouse Accessibility** | 100            | ✅ (WCAG AA) |
+| **First Contentful Paint**   | < 1.5s         | TBD          |
+| **Time to Interactive**      | < 3s           | TBD          |
+| **API Response (p95)**       | < 200ms        | TBD          |
+| **Database Query (p95)**     | < 100ms        | TBD          |
+| **Bundle Size**              | < 300KB (gzip) | TBD          |
 
 ---
 
 ## Security Considerations
 
 ### Authentication
+
 - ✅ Passwordless (magic links only)
 - ✅ Magic links expire after 15 minutes
 - ✅ Single-use tokens (marked as used)
@@ -804,6 +874,7 @@ UPLOAD_DIR=./uploads
 - 🔄 Rate limiting on auth endpoints
 
 ### Data Protection
+
 - ✅ All API requests over HTTPS in production
 - 🔄 JWT in httpOnly cookies (currently localStorage)
 - ✅ Input validation on all endpoints
@@ -812,6 +883,7 @@ UPLOAD_DIR=./uploads
 - 🔄 Content Security Policy headers
 
 ### File Uploads
+
 - ✅ File type validation (MIME check)
 - ✅ File size limits (10MB max)
 - 🔄 Virus scanning (ClamAV integration planned)
@@ -819,6 +891,7 @@ UPLOAD_DIR=./uploads
 - ✅ Unique filenames (UUID-based)
 
 ### Database
+
 - ✅ Separate database user (tradepulse)
 - ✅ Row-level security policies (user_id checks)
 - 🔄 Encrypted backups
@@ -828,16 +901,17 @@ UPLOAD_DIR=./uploads
 
 ## Browser Support
 
-| Browser | Version | Status |
-|---------|---------|--------|
-| Chrome | 90+ | ✅ Supported |
-| Firefox | 88+ | ✅ Supported |
-| Safari | 14+ | ✅ Supported |
-| Edge | 90+ | ✅ Supported |
-| Mobile Safari | iOS 14+ | ✅ Supported |
+| Browser       | Version     | Status       |
+| ------------- | ----------- | ------------ |
+| Chrome        | 90+         | ✅ Supported |
+| Firefox       | 88+         | ✅ Supported |
+| Safari        | 14+         | ✅ Supported |
+| Edge          | 90+         | ✅ Supported |
+| Mobile Safari | iOS 14+     | ✅ Supported |
 | Chrome Mobile | Android 90+ | ✅ Supported |
 
 **Required Features:**
+
 - ES2020 JavaScript
 - CSS Grid & Flexbox
 - backdrop-filter (graceful degradation)
@@ -849,6 +923,7 @@ UPLOAD_DIR=./uploads
 ## Accessibility Standards
 
 **WCAG 2.1 Level AA Compliance:**
+
 - ✅ Color contrast ratios > 4.5:1
 - ✅ Keyboard navigation for all interactive elements
 - ✅ Screen reader support (ARIA labels)
@@ -859,6 +934,7 @@ UPLOAD_DIR=./uploads
 - ✅ Accessible modals (focus trapping)
 
 **Keyboard Shortcuts:**
+
 - `Escape` - Close modals/lightboxes
 - `Tab` - Navigate between elements
 - `Enter` - Activate buttons/links
@@ -869,6 +945,7 @@ UPLOAD_DIR=./uploads
 ## Testing Strategy
 
 ### Frontend
+
 - **Unit Tests:** Vitest for component logic
 - **Component Tests:** Testing Library for UI
 - **E2E Tests:** Playwright for user flows
@@ -876,12 +953,14 @@ UPLOAD_DIR=./uploads
 - **Visual Regression:** Percy or Chromatic
 
 ### Backend
+
 - **Unit Tests:** Jest for business logic
 - **Integration Tests:** Supertest for API endpoints
 - **Database Tests:** Test database with migrations
 - **Load Tests:** Artillery or k6
 
 ### Coverage Targets
+
 - **Frontend:** 80% coverage
 - **Backend:** 90% coverage (critical paths 100%)
 
@@ -892,6 +971,7 @@ UPLOAD_DIR=./uploads
 ### Production Environment
 
 **Frontend (Vercel/Netlify):**
+
 ```bash
 npm run build
 # Deploy build/ folder
@@ -899,6 +979,7 @@ npm run build
 ```
 
 **Backend (Railway/Render/AWS):**
+
 ```bash
 npm run build
 npm start
@@ -907,6 +988,7 @@ npm start
 ```
 
 **Database (Managed PostgreSQL):**
+
 - Supabase (recommended for indie projects)
 - Railway (easy integration)
 - Neon (serverless PostgreSQL)
@@ -915,11 +997,13 @@ npm start
 ### Monitoring & Logging
 
 **Frontend:**
+
 - Sentry for error tracking
 - Google Analytics or Plausible
 - Vercel Analytics
 
 **Backend:**
+
 - Winston or Pino for logging
 - Sentry for error tracking
 - Database slow query logs
@@ -929,11 +1013,13 @@ npm start
 ## Contributing
 
 ### Code Style
+
 - **Linting:** ESLint with TypeScript rules
 - **Formatting:** Prettier (single quotes, tabs, 100 char width)
 - **Commits:** Conventional Commits format
 
 ### Git Workflow
+
 - `main` - Production-ready code
 - `develop` - Integration branch
 - `feature/*` - New features
@@ -941,6 +1027,7 @@ npm start
 - `docs/*` - Documentation updates
 
 ### Pull Request Process
+
 1. Create feature branch from `develop`
 2. Write tests for new features
 3. Ensure all tests pass
@@ -954,6 +1041,7 @@ npm start
 ## Roadmap
 
 ### Q1 2025
+
 - [x] Frontend UI complete
 - [ ] Backend API implementation
 - [ ] Database migrations
@@ -961,6 +1049,7 @@ npm start
 - [ ] Core CRUD operations
 
 ### Q2 2025
+
 - [ ] File upload implementation
 - [ ] WebSocket real-time updates
 - [ ] Analytics calculations
@@ -968,6 +1057,7 @@ npm start
 - [ ] Beta launch
 
 ### Q3 2025
+
 - [ ] CSV import/export
 - [ ] PDF report generation
 - [ ] Mobile app (React Native)
@@ -975,6 +1065,7 @@ npm start
 - [ ] Public launch
 
 ### Q4 2025
+
 - [ ] API for third-party integrations
 - [ ] Trading platform integrations
 - [ ] Collaborative features
@@ -994,6 +1085,7 @@ Copyright © 2025 TradePulse
 ### Version 2.0.0 (January 2025)
 
 **Major Redesign:**
+
 - ✅ Complete UI overhaul with macOS-inspired dock navigation
 - ✅ Glassmorphism design system implementation
 - ✅ Position lifecycle management (multiple entries/exits)
@@ -1008,6 +1100,7 @@ Copyright © 2025 TradePulse
 - ✅ 22 reusable UI components
 
 **Technical Improvements:**
+
 - ✅ Upgraded to Svelte 5 with runes
 - ✅ Modern Tailwind CSS 3.4 setup
 - ✅ Removed sidebar, added dock navigation
@@ -1016,6 +1109,7 @@ Copyright © 2025 TradePulse
 - ✅ Performance optimizations
 
 ### Version 1.0.0 (Deprecated)
+
 - Basic trade tracking
 - Simple journaling
 - Sidebar navigation

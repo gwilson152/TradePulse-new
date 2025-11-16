@@ -8,9 +8,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"tradepulse/internal/database"
-	"tradepulse/internal/models"
-	"tradepulse/internal/notifications"
+	"github.com/tradepulse/api/internal/database"
+	"github.com/tradepulse/api/internal/middleware"
+	"github.com/tradepulse/api/internal/models"
+	"github.com/tradepulse/api/internal/notifications"
 )
 
 // Helper functions for JSON responses
@@ -34,16 +35,16 @@ func sendError(w http.ResponseWriter, status int, message string, err error) {
 
 // getUserID extracts user ID from context (set by auth middleware)
 func getUserID(r *http.Request) uuid.UUID {
-	userID, _ := r.Context().Value("userID").(uuid.UUID)
+	userID, _ := middleware.GetUserID(r)
 	return userID
 }
 
 type TradesHandler struct {
 	db  *database.DB
-	bus *notifications.NotificationBus
+	bus *notifications.Bus
 }
 
-func NewTradesHandler(db *database.DB, bus *notifications.NotificationBus) *TradesHandler {
+func NewTradesHandler(db *database.DB, bus *notifications.Bus) *TradesHandler {
 	return &TradesHandler{db: db, bus: bus}
 }
 
@@ -141,13 +142,16 @@ func (h *TradesHandler) CreateTrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send notification
-	h.bus.Publish(userID, notifications.Notification{
-		Type: "trade.created",
-		Data: map[string]interface{}{
+	h.bus.Publish(
+		notifications.NotificationTypeTradeCreated,
+		userID,
+		"Trade Created",
+		"New trade added successfully",
+		map[string]interface{}{
 			"id":     trade.ID,
 			"symbol": trade.Symbol,
 		},
-	})
+	)
 
 	sendJSON(w, http.StatusCreated, map[string]interface{}{
 		"success": true,
@@ -189,13 +193,16 @@ func (h *TradesHandler) UpdateTrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send notification
-	h.bus.Publish(userID, notifications.Notification{
-		Type: "trade.updated",
-		Data: map[string]interface{}{
+	h.bus.Publish(
+		notifications.NotificationTypeTradeUpdated,
+		userID,
+		"Trade Updated",
+		"Trade updated successfully",
+		map[string]interface{}{
 			"id":     trade.ID,
 			"symbol": trade.Symbol,
 		},
-	})
+	)
 
 	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -218,12 +225,15 @@ func (h *TradesHandler) DeleteTrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send notification
-	h.bus.Publish(userID, notifications.Notification{
-		Type: "trade.deleted",
-		Data: map[string]interface{}{
+	h.bus.Publish(
+		notifications.NotificationTypeTradeDeleted,
+		userID,
+		"Trade Deleted",
+		"Trade deleted successfully",
+		map[string]interface{}{
 			"id": tradeID,
 		},
-	})
+	)
 
 	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,

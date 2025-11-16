@@ -71,7 +71,12 @@
 
 {#if isOpen && trade}
 	<div class="fixed inset-0 z-50 overflow-hidden">
-		<div class="absolute inset-0 bg-black/50" onclick={onClose}></div>
+		<button
+			class="absolute inset-0 bg-black/50 cursor-default"
+			onclick={onClose}
+			aria-label="Close panel"
+			tabindex="-1"
+		></button>
 
 		<div class="absolute inset-y-0 right-0 max-w-md w-full">
 			<div

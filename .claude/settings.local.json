@@ -4,7 +4,9 @@
       "Bash(npm install:*)",
       "WebSearch",
       "WebFetch(domain:help.chartlog.com)",
-      "WebFetch(domain:edgewonk.zendesk.com)"
+      "WebFetch(domain:edgewonk.zendesk.com)",
+      "Bash(go build:*)",
+      "Bash(ls -la \"D:\\Dev\\TradePulse\\docs\"\" 2>/dev/null || echo \"docs directory not found \")"
     ],
     "deny": [],
     "ask": []

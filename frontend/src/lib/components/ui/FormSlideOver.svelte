@@ -104,13 +104,13 @@
 
 {#if open}
 	<!-- Backdrop -->
-	<div
-		class="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm transition-opacity duration-300"
+	<button
+		class="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm transition-opacity duration-300 cursor-default"
 		onclick={handleBackdropClick}
-		role="button"
+		onkeydown={(e) => e.key === 'Enter' && handleBackdropClick()}
 		tabindex="-1"
 		aria-label="Close panel"
-	></div>
+	></button>
 
 	<!-- Slide-over Panel -->
 	<div

@@ -5,7 +5,10 @@
 			"label": "Start Backend",
 			"type": "shell",
 			"command": "go",
-			"args": ["run", "cmd/api/main.go"],
+			"args": [
+				"run",
+				"cmd/api/main.go"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/backend"
 			},
@@ -28,7 +31,10 @@
 			"label": "Start Frontend",
 			"type": "shell",
 			"command": "npm",
-			"args": ["run", "dev"],
+			"args": [
+				"run",
+				"dev"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/frontend"
 			},
@@ -49,7 +55,10 @@
 		},
 		{
 			"label": "Start All (Frontend + Backend)",
-			"dependsOn": ["Start Backend", "Start Frontend"],
+			"dependsOn": [
+				"Start Backend",
+				"Start Frontend"
+			],
 			"problemMatcher": [],
 			"presentation": {
 				"echo": true,
@@ -64,11 +73,18 @@
 			"label": "Build Backend",
 			"type": "shell",
 			"command": "go",
-			"args": ["build", "-o", "bin/api", "./cmd/api"],
+			"args": [
+				"build",
+				"-o",
+				"bin/api",
+				"./cmd/api"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/backend"
 			},
-			"problemMatcher": ["$go"],
+			"problemMatcher": [
+				"$go"
+			],
 			"presentation": {
 				"echo": true,
 				"reveal": "always",
@@ -81,7 +97,10 @@
 			"label": "Build Frontend",
 			"type": "shell",
 			"command": "npm",
-			"args": ["run", "build"],
+			"args": [
+				"run",
+				"build"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/frontend"
 			},
@@ -98,7 +117,10 @@
 			"label": "Install Backend Dependencies",
 			"type": "shell",
 			"command": "go",
-			"args": ["mod", "download"],
+			"args": [
+				"mod",
+				"download"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/backend"
 			},
@@ -114,7 +136,9 @@
 			"label": "Install Frontend Dependencies",
 			"type": "shell",
 			"command": "npm",
-			"args": ["install"],
+			"args": [
+				"install"
+			],
 			"options": {
 				"cwd": "${workspaceFolder}/frontend"
 			},
@@ -131,17 +155,63 @@
 			"type": "shell",
 			"command": "psql",
 			"args": [
-				"-h", "postgres1.drivenw.local",
-				"-p", "5432",
-				"-U", "tradepulse",
-				"-d", "tradepulse",
-				"-f", "migrations/001_initial_schema.up.sql"
+				"-h",
+				"postgres1.drivenw.local",
+				"-p",
+				"5432",
+				"-U",
+				"tradepulse",
+				"-d",
+				"tradepulse",
+				"-f",
+				"migrations/001_initial_schema.up.sql"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/backend",
 				"env": {
 					"PGPASSWORD": "drv13llc!"
 				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Test Backend",
+			"type": "shell",
+			"command": "go",
+			"args": [
+				"test",
+				"./..."
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": [
+				"$go"
+			],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false
+			}
+		},
+		{
+			"label": "Format Backend Code",
+			"type": "shell",
+			"command": "gofmt",
+			"args": [
+				"-w",
+				"."
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
 			},
 			"problemMatcher": [],
 			"presentation": {

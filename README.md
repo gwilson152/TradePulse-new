@@ -180,8 +180,11 @@ Configure the provider in `backend/.env` by setting `EMAIL_PROVIDER` and the cor
 ### Project Documentation
 
 - `/docs/project.md` - Complete project specification and architecture
-- `/docs/api-spec.md` - Detailed API endpoint documentation
+- `/docs/api-spec.md` - API specification (includes planned features)
+- `/docs/backend/trades-api.md` - **Actual implemented Trades API documentation**
+- `/docs/backend/IMPLEMENTATION_STATUS.md` - **Current implementation status tracker**
 - `/docs/csv-import.md` - CSV import guide for DAS Trader Pro, PropReports, and other platforms
+- `/docs/websocket-notifications.md` - Real-time WebSocket notifications
 - `/.claude/instructions.md` - Development guidelines and best practices
 
 ## API Documentation

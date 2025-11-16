@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"tradepulse/internal/models"
+	"github.com/tradepulse/api/internal/models"
 )
 
 // TradeFilters represents filters for listing trades
@@ -89,7 +89,7 @@ func (db *DB) ListTrades(ctx context.Context, userID uuid.UUID, filters TradeFil
 		args = append(args, filters.Offset)
 	}
 
-	rows, err := db.pool.Query(ctx, query, args...)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list trades: %w", err)
 	}
@@ -155,7 +155,7 @@ func (db *DB) GetTrade(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*mo
 	var trade models.Trade
 	var tagsJSON []byte
 
-	err := db.pool.QueryRow(ctx, query, id, userID).Scan(
+	err := db.QueryRow(query, id, userID).Scan(
 		&trade.ID, &trade.UserID, &trade.Symbol, &trade.TradeType, &trade.Quantity,
 		&trade.EntryPrice, &trade.ExitPrice, &trade.Fees, &trade.PnL,
 		&trade.OpenedAt, &trade.ClosedAt, &trade.CreatedAt, &trade.UpdatedAt,
@@ -194,8 +194,8 @@ func (db *DB) CreateTrade(ctx context.Context, trade *models.Trade) error {
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, pnl, created_at, updated_at`
 
-	err := db.pool.QueryRow(
-		ctx, query,
+	err := db.QueryRow(
+		query,
 		trade.UserID, trade.Symbol, trade.TradeType, trade.Quantity,
 		trade.EntryPrice, trade.ExitPrice, trade.Fees, trade.OpenedAt, trade.ClosedAt,
 	).Scan(&trade.ID, &trade.PnL, &trade.CreatedAt, &trade.UpdatedAt)
@@ -216,8 +216,8 @@ func (db *DB) UpdateTrade(ctx context.Context, id uuid.UUID, userID uuid.UUID, t
 		WHERE id = $1 AND user_id = $2
 		RETURNING pnl, updated_at`
 
-	err := db.pool.QueryRow(
-		ctx, query,
+	err := db.QueryRow(
+		query,
 		id, userID, trade.Symbol, trade.TradeType, trade.Quantity,
 		trade.EntryPrice, trade.ExitPrice, trade.Fees, trade.OpenedAt, trade.ClosedAt,
 	).Scan(&trade.PnL, &trade.UpdatedAt)
@@ -239,12 +239,15 @@ func (db *DB) UpdateTrade(ctx context.Context, id uuid.UUID, userID uuid.UUID, t
 func (db *DB) DeleteTrade(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	query := `DELETE FROM trades WHERE id = $1 AND user_id = $2`
 
-	result, err := db.pool.Exec(ctx, query, id, userID)
+	result, err := db.Exec(query, id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete trade: %w", err)
 	}
 
-	rowsAffected := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rowsAffected == 0 {
 		return fmt.Errorf("trade not found or unauthorized")
 	}
@@ -254,11 +257,11 @@ func (db *DB) DeleteTrade(ctx context.Context, id uuid.UUID, userID uuid.UUID) e
 
 // BulkCreateTrades inserts multiple trades (for CSV import)
 func (db *DB) BulkCreateTrades(ctx context.Context, trades []models.Trade) ([]uuid.UUID, error) {
-	tx, err := db.pool.Begin(ctx)
+	tx, err := db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback()
 
 	stmt := `
 		INSERT INTO trades (
@@ -272,7 +275,7 @@ func (db *DB) BulkCreateTrades(ctx context.Context, trades []models.Trade) ([]uu
 	for _, trade := range trades {
 		var id uuid.UUID
 		err := tx.QueryRow(
-			ctx, stmt,
+			stmt,
 			trade.UserID, trade.Symbol, trade.TradeType, trade.Quantity,
 			trade.EntryPrice, trade.ExitPrice, trade.Fees, trade.OpenedAt, trade.ClosedAt,
 		).Scan(&id)
@@ -284,7 +287,7 @@ func (db *DB) BulkCreateTrades(ctx context.Context, trades []models.Trade) ([]uu
 		ids = append(ids, id)
 	}
 
-	if err = tx.Commit(ctx); err != nil {
+	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
@@ -295,7 +298,7 @@ func (db *DB) BulkCreateTrades(ctx context.Context, trades []models.Trade) ([]uu
 func (db *DB) AddTagToTrade(ctx context.Context, tradeID uuid.UUID, tagID uuid.UUID, userID uuid.UUID) error {
 	// Verify trade ownership
 	var exists bool
-	err := db.pool.QueryRow(ctx,
+	err := db.QueryRow(
 		"SELECT EXISTS(SELECT 1 FROM trades WHERE id = $1 AND user_id = $2)",
 		tradeID, userID,
 	).Scan(&exists)
@@ -313,7 +316,7 @@ func (db *DB) AddTagToTrade(ctx context.Context, tradeID uuid.UUID, tagID uuid.U
 		VALUES ($1, $2)
 		ON CONFLICT (trade_id, tag_id) DO NOTHING`
 
-	_, err = db.pool.Exec(ctx, query, tradeID, tagID)
+	_, err = db.Exec(query, tradeID, tagID)
 	if err != nil {
 		return fmt.Errorf("failed to add tag to trade: %w", err)
 	}
@@ -325,7 +328,7 @@ func (db *DB) AddTagToTrade(ctx context.Context, tradeID uuid.UUID, tagID uuid.U
 func (db *DB) RemoveTagFromTrade(ctx context.Context, tradeID uuid.UUID, tagID uuid.UUID, userID uuid.UUID) error {
 	// Verify trade ownership
 	var exists bool
-	err := db.pool.QueryRow(ctx,
+	err := db.QueryRow(
 		"SELECT EXISTS(SELECT 1 FROM trades WHERE id = $1 AND user_id = $2)",
 		tradeID, userID,
 	).Scan(&exists)
@@ -339,12 +342,15 @@ func (db *DB) RemoveTagFromTrade(ctx context.Context, tradeID uuid.UUID, tagID u
 
 	query := `DELETE FROM trade_tags WHERE trade_id = $1 AND tag_id = $2`
 
-	result, err := db.pool.Exec(ctx, query, tradeID, tagID)
+	result, err := db.Exec(query, tradeID, tagID)
 	if err != nil {
 		return fmt.Errorf("failed to remove tag from trade: %w", err)
 	}
 
-	rowsAffected := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rowsAffected == 0 {
 		return fmt.Errorf("tag association not found")
 	}
