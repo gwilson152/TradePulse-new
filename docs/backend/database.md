@@ -89,45 +89,12 @@ PRIMARY KEY (trade_id, tag_id)
 
 ## Migrations
 
-**Location**: `backend/migrations/`
+See [migrations.md](./migrations.md) for complete migration documentation.
 
-### Running Migrations
-
-**Manual**:
-```bash
-psql -h postgres1.drivenw.local -U tradepulse -d tradepulse \
-  -f migrations/001_initial_schema.up.sql
-```
-
-**Rollback**:
-```bash
-psql -h postgres1.drivenw.local -U tradepulse -d tradepulse \
-  -f migrations/001_initial_schema.down.sql
-```
-
-**Automatic**: Migrations run on server start (via `db.RunMigrations()`)
-
-### Creating Migrations
-
-1. Create pair of files:
-   - `002_description.up.sql`
-   - `002_description.down.sql`
-
-2. Write forward migration (up.sql):
-```sql
-CREATE TABLE new_table (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL
-);
-```
-
-3. Write rollback (down.sql):
-```sql
-DROP TABLE IF EXISTS new_table;
-```
-
-4. Test both directions
+**Quick Start:**
+- Migrations run automatically on server start
+- VSCode Tasks: `Ctrl+Shift+P` → "Migrate Up" / "Migration Status"
+- Uses [golang-migrate](https://github.com/golang-migrate/migrate)
 
 ## Query Patterns
 

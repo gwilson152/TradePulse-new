@@ -79,7 +79,8 @@ func main() {
 	logger.Info("Database connection established")
 
 	// Run migrations
-	if err := db.RunMigrations(); err != nil {
+	migrationsPath := getEnv("MIGRATIONS_PATH", "migrations")
+	if err := db.RunMigrations(migrationsPath); err != nil {
 		logger.Error("Failed to run migrations", "error", err)
 		os.Exit(1)
 	}
@@ -195,6 +196,9 @@ func main() {
 
 			// Notification stats
 			r.Get("/notifications/stats", handlers.HandleNotificationStats(app.notificationBus, app.logger))
+
+			// Integrations
+			r.Post("/integrations/propreports/fetch", handlers.FetchPropReportsTrades(app.logger))
 		})
 	})
 

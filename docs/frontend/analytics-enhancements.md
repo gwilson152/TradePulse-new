@@ -345,7 +345,7 @@ let metrics = $derived(calculateMetrics($trades));
 ### Created Files
 
 1. **`src/lib/utils/analytics.ts`** - Analytics calculation utilities
-2. **`docs/frontend/ANALYTICS_ENHANCEMENTS.md`** - This document
+2. **`docs/frontend/analytics-enhancements.md`** - This document
 
 ### Modified Files
 

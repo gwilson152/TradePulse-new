@@ -11,7 +11,7 @@ TradePulse helps traders track performance, document decision-making processes, 
 - **Advanced Journaling**: Rich text entries with emotional state tracking, screenshot uploads, and voice notes
 - **Comprehensive Metrics**: Track P&L, win rate, profit factor, and performance across all trades
 - **CSV Import**: Import trading history from DAS Trader Pro, PropReports, and other platforms ([Import Guide](docs/csv-import.md))
-- **Magic Link Authentication**: Secure, passwordless authentication via email
+- **Dual Authentication**: Magic Link (passwordless) OR Email/Password ([Auth Guide](docs/authentication.md))
 - **Privacy-First**: Self-hosted with complete data ownership
 
 ## Technology Stack
@@ -19,7 +19,7 @@ TradePulse helps traders track performance, document decision-making processes, 
 - **Frontend**: SvelteKit 5 with TypeScript
 - **Backend**: Go 1.21+ with Chi router
 - **Database**: PostgreSQL 15+
-- **Authentication**: JWT tokens with magic link email flow
+- **Authentication**: JWT tokens with dual auth (Magic Link + Password)
 
 ## Project Structure
 
@@ -141,12 +141,13 @@ The frontend will be available at: `https://tradepulse.drivenw.com:4000`
 
 ### Database Migrations
 
-Migrations are located in `backend/migrations/` and follow the pattern:
+**Auto-Migration:** Migrations run automatically on backend startup.
 
-- `XXX_description.up.sql` - Apply migration
-- `XXX_description.down.sql` - Rollback migration
+Migrations are located in `backend/migrations/`:
+- `001_initial_schema.up.sql` - Users, trades, tags, journal tables
+- `002_add_password_auth.up.sql` - Password authentication
 
-To run migrations manually:
+To run migrations manually (VSCode Task or command line):
 
 ```bash
 # Apply migration
@@ -165,7 +166,8 @@ psql -h postgres1.drivenw.local -U tradepulse -d tradepulse -f backend/migration
 - **Build Frontend** - Build production frontend
 - **Install Backend Dependencies** - Download Go modules
 - **Install Frontend Dependencies** - Install npm packages
-- **Run Database Migrations** - Apply SQL migrations
+- **Run Database Migrations** - Apply initial schema migration
+- **Run Password Migration** - Apply password auth migration
 
 ### Email Configuration
 
@@ -179,12 +181,19 @@ Configure the provider in `backend/.env` by setting `EMAIL_PROVIDER` and the cor
 
 ### Project Documentation
 
+**Core Docs:**
 - `/docs/project.md` - Complete project specification and architecture
-- `/docs/api-spec.md` - API specification (includes planned features)
-- `/docs/backend/trades-api.md` - **Actual implemented Trades API documentation**
-- `/docs/backend/IMPLEMENTATION_STATUS.md` - **Current implementation status tracker**
-- `/docs/csv-import.md` - CSV import guide for DAS Trader Pro, PropReports, and other platforms
-- `/docs/websocket-notifications.md` - Real-time WebSocket notifications
+- `/docs/authentication.md` - Authentication system guide (Magic Link + Password)
+- `/docs/csv-import.md` - CSV import guide for DAS Trader and PropReports
+
+**Backend:**
+- `/docs/backend/implementation-status.md` - Current implementation status
+- `/docs/backend/trades-api.md` - Trades API documentation
+- `/docs/api-spec.md` - Full API specification (includes planned features)
+
+**Frontend:**
+- `/docs/frontend/components.md` - Component library documentation
+- `/docs/frontend/design-system.md` - Design system and styling guide
 - `/.claude/instructions.md` - Development guidelines and best practices
 
 ## API Documentation

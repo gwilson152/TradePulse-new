@@ -1,12 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install:*)",
-      "WebSearch",
-      "WebFetch(domain:help.chartlog.com)",
-      "WebFetch(domain:edgewonk.zendesk.com)",
-      "Bash(go build:*)",
-      "Bash(ls -la \"D:\\Dev\\TradePulse\\docs\"\" 2>/dev/null || echo \"docs directory not found \")"
+      "Bash(go get:*)",
+      "Bash(go install:*)",
+      "WebFetch(domain:propreports.atlassian.net)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/tradepulse/api/internal/database"
+	"github.com/tradepulse/api/internal/middleware"
 	"github.com/tradepulse/api/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -162,7 +163,7 @@ func VerifyMagicLink(db *database.DB, logger *slog.Logger, jwtSecret, jwtExpiry 
 func GetCurrentUser(db *database.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get user ID from context (set by auth middleware)
-		userID, ok := r.Context().Value("user_id").(uuid.UUID)
+		userID, ok := middleware.GetUserID(r)
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
 			return
@@ -193,7 +194,7 @@ type LoginWithPasswordInput struct {
 func SetPassword(db *database.DB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get user ID from context (set by auth middleware)
-		userID, ok := r.Context().Value("user_id").(uuid.UUID)
+		userID, ok := middleware.GetUserID(r)
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
 			return

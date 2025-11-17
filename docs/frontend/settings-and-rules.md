@@ -695,8 +695,8 @@ Importance: 3 (Average)
 
 ## 📚 Related Documentation
 
-- **THEME_IMPROVEMENTS.md** - Form component styling
-- **ANALYTICS_ENHANCEMENTS.md** - Rule adherence analytics
+- **theme-improvements.md** - Form component styling
+- **analytics-enhancements.md** - Rule adherence analytics
 - **Types (types/index.ts)** - Rule, RulePhase, RuleCategory interfaces
 
 ---

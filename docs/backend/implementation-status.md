@@ -2,7 +2,7 @@
 
 This document tracks the implementation status of all API endpoints and features to prevent confusion between documentation and reality.
 
-**Last Updated:** November 15, 2024
+**Last Updated:** November 16, 2025
 
 ## Implementation Legend
 
@@ -21,12 +21,24 @@ This document tracks the implementation status of all API endpoints and features
 |----------|--------|--------|-------|
 | `/api/auth/request-magic-link` | POST | ✅ | Generates magic link (email not sent yet) |
 | `/api/auth/verify` | GET | ✅ | Verifies token and returns JWT |
+| `/api/auth/login` | POST | ✅ | Email/password authentication |
+| `/api/auth/me` | GET | ✅ | Get current authenticated user |
+| `/api/auth/set-password` | POST | ✅ | Set or update user password |
 | `/api/auth/logout` | POST | ✅ | Client-side logout |
 | `/api/auth/refresh` | POST | 📋 | JWT refresh token mechanism |
 
-**Notes:**
-- Magic link generation works but email sending is stubbed (logs to console)
-- Email provider integration (SMTP/Graph/Gmail) is configured but not fully implemented
+**Features:**
+- ✅ Dual authentication: Magic Link OR Email/Password
+- ✅ Bcrypt password hashing (cost 10)
+- ✅ Password strength validation (min 8 chars)
+- ✅ JWT token with user email and ID
+- ✅ Race condition handling for user creation
+- ✅ Proper middleware context key usage (`middleware.GetUserID()`)
+- 🚧 Email sending stubbed (logs to console)
+
+**Database:**
+- ✅ Migration 002: `password_hash` column added to users table
+- ✅ Auto-migrations run on server startup
 
 ### Trades - CRUD Operations
 
@@ -70,14 +82,14 @@ This document tracks the implementation status of all API endpoints and features
 
 | Endpoint | Method | Status | Notes |
 |----------|--------|--------|-------|
-| `/api/trades/import-csv` | POST | 🚧 | Handler stubbed, database function ready |
+| `/api/trades/import-csv` | POST | ✅ | Bulk trade import with transaction support |
 
 **Status:**
 - ✅ `BulkCreateTrades()` database function implemented
-- ✅ Frontend CSV import UI complete
+- ✅ `ImportCSV` HTTP handler implemented
+- ✅ Frontend CSV import UI complete (3-tab workflow)
 - ✅ CSV parsing utilities (DAS Trader, PropReports)
-- ❌ Backend HTTP handler not yet implemented
-- 📋 Needs integration with frontend CSV parser output
+- ✅ WebSocket notifications on import
 
 ### Trades - Advanced Position Management
 
@@ -232,13 +244,17 @@ This document tracks the implementation status of all API endpoints and features
 
 | Migration | Status | Notes |
 |-----------|--------|-------|
-| `001_initial_schema` | ✅ | Full schema with all tables, triggers, indices |
+| `001_initial_schema` | ✅ | All tables, indexes, functions, triggers |
+| `002_add_password_auth` | ✅ | Password authentication support |
 
 **Migration System:**
-- ✅ Embedded migrations in binary
-- ✅ Automatic execution on startup
+- ✅ Using [golang-migrate](https://github.com/golang-migrate/migrate) (industry standard)
+- ✅ Automatic execution on startup via `db.RunMigrations()`
 - ✅ Migration tracking via `schema_migrations` table
-- ✅ Manual up/down SQL files available
+- ✅ Up/down SQL files in `backend/migrations/`
+- ✅ CLI tools for manual migration management
+- ✅ VSCode tasks for common operations
+- ✅ See [migrations.md](./migrations.md) for details
 
 ### Query Functions Implemented
 

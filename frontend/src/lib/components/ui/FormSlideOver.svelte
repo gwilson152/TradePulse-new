@@ -163,11 +163,13 @@
 							{#each tabs as tab}
 								<button
 									type="button"
-									onclick={() => handleTabClick(tab.id)}
+									onclick={() => !tab.disabled && handleTabClick(tab.id)}
+									disabled={tab.disabled}
 									class="group relative flex items-center gap-2.5 px-4 py-3 border-b-2 transition-all duration-200 whitespace-nowrap
 										{activeTab === tab.id
 											? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20'
 											: 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/30'}
+										{tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
 										rounded-t-lg font-medium text-sm"
 								>
 									<Icon icon={tab.icon} width="18" />

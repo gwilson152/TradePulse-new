@@ -7,21 +7,29 @@ export const dasTraderSchema: PlatformSchema = {
 	requiresDate: true, // DAS doesn't include date, only time
 	groupExecutions: true, // Need to group executions into positions
 	columns: {
-		symbol: ['Symb', 'Symbol'],
-		side: ['Side'],
-		quantity: ['Qty', 'Quantity'],
+		symbol: ['Symbol', 'Symb'],
+		side: ['B/S', 'Side'],
+		quantity: ['Shares', 'Qty', 'Quantity'],
 		price: ['Price', 'Exec Price'],
 		timestamp: ['Time'],
 		fees: ['Commission', 'Comm'], // Optional
 		account: ['Account'],
-		orderType: ['Type']
+		orderType: ['Type'],
+		event: ['Event'] // To filter execution types
+	},
+	rowFilter: (row) => {
+		// Only process "Execute" events - skip Accept, Sending, Canceled, Canceling, Send_Rej, etc.
+		const event = row['Event'] || row['event'];
+		return event && event.trim().toLowerCase() === 'execute';
 	},
 	transformations: {
 		side: (value: string): 'B' | 'S' => {
 			const normalized = value.trim().toUpperCase();
+			// Handle various formats: B, Buy, BOT, etc.
 			if (normalized === 'B' || normalized === 'BUY' || normalized.startsWith('BOT')) {
 				return 'B';
 			}
+			// Handle various formats: S, Sell, SOLD, etc.
 			if (normalized === 'S' || normalized === 'SELL' || normalized.startsWith('SOLD')) {
 				return 'S';
 			}

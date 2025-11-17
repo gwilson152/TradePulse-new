@@ -6,6 +6,7 @@
 	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
 	import UserMenu from '$lib/components/ui/UserMenu.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
+	import UniversalSlideOver from '$lib/components/layout/UniversalSlideOver.svelte';
 	import { apiClient } from '$lib/api/client';
 	import { userStore, getUserInitials, getDisplayName } from '$lib/stores/user';
 	import type { User } from '$lib/types';
@@ -29,7 +30,18 @@
 			const user = await apiClient.getCurrentUser();
 			currentUser = user;
 			userStore.setUser(user);
-		} catch (error) {
+		} catch (error: any) {
+			// If authentication fails (401, 403, or user not found), redirect to login
+			if (error?.message?.includes('Failed to get user') ||
+			    error?.message?.includes('Unauthorized') ||
+			    error?.message?.includes('401') ||
+			    error?.message?.includes('403')) {
+				console.error('Session invalid or expired, redirecting to login');
+				apiClient.clearAuthToken();
+				goto('/auth/login');
+				return;
+			}
+
 			console.warn('Could not fetch user details from API, using JWT token data:', error);
 			// Fallback: extract user info from JWT token
 			const payload = apiClient.getTokenPayload();
@@ -41,6 +53,12 @@
 					last_login: ''
 				};
 				userStore.setUser(currentUser);
+			} else {
+				// No valid token payload, redirect to login
+				console.error('No valid session found, redirecting to login');
+				apiClient.clearAuthToken();
+				goto('/auth/login');
+				return;
 			}
 		}
 
@@ -81,6 +99,7 @@
 
 {#if isAuthenticated}
 	<Toast />
+	<UniversalSlideOver />
 	<div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
 		<!-- Menu Bar (macOS-style) -->
 		<div class="fixed top-0 left-0 right-0 h-11 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 z-50 flex items-center justify-between px-4">

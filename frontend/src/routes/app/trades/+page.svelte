@@ -45,9 +45,9 @@
 
 	async function handleImportTrades(importedTrades: Partial<Trade>[]) {
 		try {
-			// TODO: Call API to bulk create trades
-			console.log('Importing trades:', importedTrades);
-			toast.success(`Imported ${importedTrades.length} trades successfully`);
+			const result = await apiClient.importTrades(importedTrades);
+			console.log('Import result:', result);
+			toast.success(`Imported ${result.imported} trades successfully`);
 			await loadTrades();
 		} catch (err) {
 			console.error('Failed to import trades:', err);
@@ -157,54 +157,76 @@
 			<!-- Filter Chips -->
 			<div class="flex gap-2 flex-wrap">
 				<button
-					class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-					class:bg-primary-600={filterStatus === 'all'}
+					class="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105"
+					class:bg-gradient-to-r={filterStatus === 'all'}
+					class:from-blue-500={filterStatus === 'all'}
+					class:to-purple-600={filterStatus === 'all'}
 					class:text-white={filterStatus === 'all'}
-					class:bg-surface-100={filterStatus !== 'all'}
-					class:text-surface-700={filterStatus !== 'all'}
+					class:shadow-md={filterStatus === 'all'}
+					class:bg-slate-100={filterStatus !== 'all'}
+					class:dark:bg-slate-800={filterStatus !== 'all'}
+					class:text-slate-700={filterStatus !== 'all'}
+					class:dark:text-slate-300={filterStatus !== 'all'}
 					onclick={() => (filterStatus = 'all')}
 				>
-					All
+					<Icon icon="mdi:view-grid" width="16" class="inline mr-1.5" />
+					All ({trades.length})
 				</button>
 				<button
-					class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-					class:bg-primary-600={filterStatus === 'open'}
+					class="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105"
+					class:bg-blue-500={filterStatus === 'open'}
 					class:text-white={filterStatus === 'open'}
-					class:bg-surface-100={filterStatus !== 'open'}
-					class:text-surface-700={filterStatus !== 'open'}
+					class:shadow-md={filterStatus === 'open'}
+					class:bg-slate-100={filterStatus !== 'open'}
+					class:dark:bg-slate-800={filterStatus !== 'open'}
+					class:text-slate-700={filterStatus !== 'open'}
+					class:dark:text-slate-300={filterStatus !== 'open'}
 					onclick={() => (filterStatus = 'open')}
 				>
+					<Icon icon="mdi:clock-outline" width="16" class="inline mr-1.5" />
 					Open
 				</button>
 				<button
-					class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-					class:bg-primary-600={filterStatus === 'closed'}
+					class="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105"
+					class:bg-slate-600={filterStatus === 'closed'}
 					class:text-white={filterStatus === 'closed'}
-					class:bg-surface-100={filterStatus !== 'closed'}
-					class:text-surface-700={filterStatus !== 'closed'}
+					class:shadow-md={filterStatus === 'closed'}
+					class:bg-slate-100={filterStatus !== 'closed'}
+					class:dark:bg-slate-800={filterStatus !== 'closed'}
+					class:text-slate-700={filterStatus !== 'closed'}
+					class:dark:text-slate-300={filterStatus !== 'closed'}
 					onclick={() => (filterStatus = 'closed')}
 				>
+					<Icon icon="mdi:check-circle" width="16" class="inline mr-1.5" />
 					Closed
 				</button>
 				<button
-					class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-					class:bg-primary-600={filterStatus === 'profitable'}
+					class="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105"
+					class:bg-emerald-500={filterStatus === 'profitable'}
 					class:text-white={filterStatus === 'profitable'}
-					class:bg-surface-100={filterStatus !== 'profitable'}
-					class:text-surface-700={filterStatus !== 'profitable'}
+					class:shadow-md={filterStatus === 'profitable'}
+					class:bg-slate-100={filterStatus !== 'profitable'}
+					class:dark:bg-slate-800={filterStatus !== 'profitable'}
+					class:text-slate-700={filterStatus !== 'profitable'}
+					class:dark:text-slate-300={filterStatus !== 'profitable'}
 					onclick={() => (filterStatus = 'profitable')}
 				>
-					Profitable
+					<Icon icon="mdi:trending-up" width="16" class="inline mr-1.5" />
+					Winners
 				</button>
 				<button
-					class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-					class:bg-primary-600={filterStatus === 'loss'}
+					class="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105"
+					class:bg-red-500={filterStatus === 'loss'}
 					class:text-white={filterStatus === 'loss'}
-					class:bg-surface-100={filterStatus !== 'loss'}
-					class:text-surface-700={filterStatus !== 'loss'}
-					onclick={() => (filterStatus = 'loss')}
+					class:shadow-md={filterStatus === 'loss'}
+					class:bg-slate-100={filterStatus !== 'loss'}
+					class:dark:bg-slate-800={filterStatus !== 'loss'}
+					class:text-slate-700={filterStatus !== 'loss'}
+					class:dark:text-slate-300={filterStatus !== 'loss'}
+					onclick={() => (filterStatus === 'loss')}
 				>
-					Loss
+					<Icon icon="mdi:trending-down" width="16" class="inline mr-1.5" />
+					Losers
 				</button>
 			</div>
 		</div>
@@ -219,84 +241,152 @@
 			</div>
 		</Card>
 	{:else if filteredTrades().length === 0}
-		<Card>
-			<div class="text-center py-12">
-				<Icon icon="mdi:chart-line" width="64" class="mx-auto mb-4 text-surface-400" />
-				<h3 class="text-xl font-semibold mb-2">No trades yet</h3>
-				<p class="text-surface-600 dark:text-surface-400 mb-6">
-					Import your trade history from CSV or manually add trades
-				</p>
-				<div class="flex gap-4 justify-center">
-					<Button color="primary" size="lg" onclick={() => (showImportModal = true)}>
-						<Icon icon="mdi:file-upload" width="24" class="mr-2" />
-						Import from CSV
-					</Button>
-					<Button color="soft" variant="soft" onclick={() => (showAddModal = true)}>
-						<Icon icon="mdi:plus" width="20" class="mr-2" />
-						Add Manually
-					</Button>
+		<div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 p-12">
+			<div class="max-w-md mx-auto text-center">
+				<div class="mb-6 relative">
+					<div class="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 flex items-center justify-center">
+						<Icon icon="mdi:chart-line-variant" width="48" class="text-blue-600 dark:text-blue-400" />
+					</div>
+					<div class="absolute top-0 right-1/2 translate-x-12 -translate-y-2">
+						<div class="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center">
+							<Icon icon="mdi:star" width="14" class="text-white" />
+						</div>
+					</div>
 				</div>
+				<h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-3">
+					{#if searchQuery || filterStatus !== 'all'}
+						No trades match your filters
+					{:else}
+						Start Your Trading Journey
+					{/if}
+				</h3>
+				<p class="text-slate-600 dark:text-slate-400 mb-8">
+					{#if searchQuery || filterStatus !== 'all'}
+						Try adjusting your search or filter criteria
+					{:else}
+						Import your trade history from CSV or manually add your first trade to begin tracking your performance
+					{/if}
+				</p>
+				{#if !searchQuery && filterStatus === 'all'}
+					<div class="flex flex-col sm:flex-row gap-3 justify-center">
+						<Button color="primary" size="lg" onclick={() => (showImportModal = true)}>
+							<Icon icon="mdi:file-upload" width="24" class="mr-2" />
+							Import from CSV
+						</Button>
+						<Button variant="soft" color="secondary" size="lg" onclick={() => (showAddModal = true)}>
+							<Icon icon="mdi:plus" width="20" class="mr-2" />
+							Add Manually
+						</Button>
+					</div>
+				{:else}
+					<Button variant="soft" color="secondary" onclick={() => { searchQuery = ''; filterStatus = 'all'; }}>
+						<Icon icon="mdi:filter-off" width="20" class="mr-2" />
+						Clear Filters
+					</Button>
+				{/if}
 			</div>
-		</Card>
+		</div>
 	{:else}
-		<Card padding="none">
-			<Table hover={true}>
-				<thead>
-					<tr>
-						<th>Date</th>
-						<th>Symbol</th>
-						<th>Type</th>
-						<th>Qty</th>
-						<th>Entry</th>
-						<th>Exit</th>
-						<th>P&L</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredTrades() as trade}
-						<tr onclick={() => handleViewTrade(trade)} class="cursor-pointer">
-							<td class="text-sm">{formatDate(trade.opened_at)}</td>
-							<td class="font-medium">{trade.symbol}</td>
-							<td>
-								<span
-									class="px-2 py-1 rounded text-xs font-medium"
-									class:bg-success-100={trade.trade_type === 'LONG'}
-									class:text-success-700={trade.trade_type === 'LONG'}
-									class:bg-error-100={trade.trade_type === 'SHORT'}
-									class:text-error-700={trade.trade_type === 'SHORT'}
-								>
-									{trade.trade_type}
-								</span>
-							</td>
-							<td>{trade.quantity}</td>
-							<td class="text-sm">{formatCurrency(trade.entry_price)}</td>
-							<td class="text-sm">
-								{trade.exit_price ? formatCurrency(trade.exit_price) : '-'}
-							</td>
-							<td>
+		<div class="space-y-3">
+			{#each filteredTrades() as trade}
+				<div
+					role="button"
+					tabindex="0"
+					onclick={() => handleViewTrade(trade)}
+					onkeydown={(e) => e.key === 'Enter' && handleViewTrade(trade)}
+					class="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 p-5 hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 cursor-pointer hover:scale-[1.01]"
+				>
+					<div class="flex items-center justify-between gap-4">
+						<!-- Left: Symbol & Time -->
+						<div class="flex items-center gap-4 flex-1">
+							<div class="flex-shrink-0">
+								<div class="w-12 h-12 rounded-xl bg-gradient-to-br {trade.trade_type === 'LONG' ? 'from-emerald-400 to-emerald-600' : 'from-red-400 to-red-600'} flex items-center justify-center shadow-md">
+									<Icon icon={trade.trade_type === 'LONG' ? 'mdi:arrow-up-bold' : 'mdi:arrow-down-bold'} width="24" class="text-white" />
+								</div>
+							</div>
+							<div>
+								<div class="flex items-center gap-2 mb-1">
+									<h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">{trade.symbol}</h3>
+									<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold {trade.trade_type === 'LONG' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}">
+										{trade.trade_type}
+									</span>
+									{#if !trade.exit_price}
+										<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex items-center gap-1">
+											<Icon icon="mdi:clock-outline" width="12" />
+											Open
+										</span>
+									{/if}
+								</div>
+								<p class="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
+									<Icon icon="mdi:calendar" width="14" />
+									{formatDate(trade.opened_at)}
+								</p>
+							</div>
+						</div>
+
+						<!-- Middle: Trade Details -->
+						<div class="hidden md:flex items-center gap-6">
+							<div class="text-center">
+								<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Quantity</p>
+								<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">{trade.quantity}</p>
+							</div>
+							<div class="text-center">
+								<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Entry</p>
+								<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(trade.entry_price)}</p>
+							</div>
+							<div class="text-center">
+								<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Exit</p>
+								<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+									{trade.exit_price ? formatCurrency(trade.exit_price) : '-'}
+								</p>
+							</div>
+						</div>
+
+						<!-- Right: P&L & Action -->
+						<div class="flex items-center gap-4">
+							<div class="text-right">
 								{#if trade.pnl !== null}
-									<PnLBadge value={trade.pnl} showSign={true} size="sm" />
+									<div class="px-4 py-2 rounded-xl font-bold text-lg {trade.pnl >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}">
+										{trade.pnl >= 0 ? '+' : ''}{formatCurrency(trade.pnl)}
+									</div>
 								{:else}
-									<span class="text-surface-500 text-sm">Open</span>
+									<div class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 font-semibold">
+										Pending
+									</div>
 								{/if}
-							</td>
-							<td>
-								<button
-									class="p-2 hover:bg-surface-100 dark:hover:bg-surface-700 rounded"
-									onclick={(e) => {
-										e.stopPropagation();
-										handleViewTrade(trade);
-									}}
-								>
-									<Icon icon="mdi:chevron-right" width="20" />
-								</button>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</Table>
-		</Card>
+							</div>
+							<button
+								onclick={(e) => {
+									e.stopPropagation();
+									handleViewTrade(trade);
+								}}
+								class="p-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+							>
+								<Icon icon="mdi:chevron-right" width="24" />
+							</button>
+						</div>
+					</div>
+
+					<!-- Mobile: Extra Details -->
+					<div class="md:hidden mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 grid grid-cols-3 gap-4 text-center">
+						<div>
+							<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Quantity</p>
+							<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">{trade.quantity}</p>
+						</div>
+						<div>
+							<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Entry</p>
+							<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(trade.entry_price)}</p>
+						</div>
+						<div>
+							<p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Exit</p>
+							<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+								{trade.exit_price ? formatCurrency(trade.exit_price) : '-'}
+							</p>
+						</div>
+					</div>
+				</div>
+			{/each}
+		</div>
 	{/if}
 </div>
 

@@ -250,6 +250,126 @@
 				"focus": false,
 				"panel": "shared"
 			}
+		},
+		{
+			"label": "Reset Database",
+			"type": "shell",
+			"command": "psql",
+			"args": [
+				"-h",
+				"postgres1.drivenw.local",
+				"-p",
+				"5432",
+				"-U",
+				"tradepulse",
+				"-d",
+				"tradepulse",
+				"-f",
+				"scripts/reset_database.sql"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend",
+				"env": {
+					"PGPASSWORD": "drv13llc!"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Migrate Up (Apply Migrations)",
+			"type": "shell",
+			"command": "migrate",
+			"args": [
+				"-path",
+				"migrations",
+				"-database",
+				"postgres://tradepulse:drv13llc!@postgres1.drivenw.local:5432/tradepulse?sslmode=disable",
+				"up"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Migrate Down (Rollback One)",
+			"type": "shell",
+			"command": "migrate",
+			"args": [
+				"-path",
+				"migrations",
+				"-database",
+				"postgres://tradepulse:drv13llc!@postgres1.drivenw.local:5432/tradepulse?sslmode=disable",
+				"down",
+				"1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Migrate Force Version",
+			"type": "shell",
+			"command": "migrate",
+			"args": [
+				"-path",
+				"migrations",
+				"-database",
+				"postgres://tradepulse:drv13llc!@postgres1.drivenw.local:5432/tradepulse?sslmode=disable",
+				"force",
+				"1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Migration Status",
+			"type": "shell",
+			"command": "migrate",
+			"args": [
+				"-path",
+				"migrations",
+				"-database",
+				"postgres://tradepulse:drv13llc!@postgres1.drivenw.local:5432/tradepulse?sslmode=disable",
+				"version"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared"
+			}
 		}
 	]
 }

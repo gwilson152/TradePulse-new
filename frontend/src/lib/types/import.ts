@@ -42,6 +42,14 @@ export interface PlatformSchema {
 	columns: ColumnMapping;
 	transformations: TransformFunctions;
 	groupExecutions: boolean; // True for platforms that export executions, not positions
+	rowFilter?: (row: CSVRow) => boolean; // Optional filter to skip non-execution rows
+	supportsAPI?: boolean; // Platform supports API import
+	apiConfig?: {
+		requiresSite: boolean; // Requires site URL input
+		requiresAuth: boolean; // Requires username/password
+		siteLabel?: string; // Label for site input (e.g., "PropReports Site")
+		sitePlaceholder?: string; // Placeholder for site input
+	};
 }
 
 export interface ColumnMapping {
@@ -53,6 +61,7 @@ export interface ColumnMapping {
 	fees?: string | string[]; // Optional commission column
 	account?: string | string[];
 	orderType?: string | string[];
+	event?: string | string[]; // Optional event type column (for filtering)
 }
 
 export interface TransformFunctions {

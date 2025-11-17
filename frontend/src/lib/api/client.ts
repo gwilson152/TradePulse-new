@@ -133,6 +133,12 @@ class APIClient {
 		return result || [];
 	}
 
+	async getTradesForDateRange(from: string, to: string): Promise<any[]> {
+		const params = new URLSearchParams({ from, to });
+		const result = await this.request<any[]>(`/api/trades?${params.toString()}`);
+		return result || [];
+	}
+
 	async createTrade(trade: any): Promise<any> {
 		return this.request('/api/trades', {
 			method: 'POST',
@@ -150,6 +156,32 @@ class APIClient {
 	async deleteTrade(id: string): Promise<void> {
 		return this.request(`/api/trades/${id}`, {
 			method: 'DELETE'
+		});
+	}
+
+	async importTrades(trades: any[]): Promise<{ imported: number; errors: any[] }> {
+		return this.request('/api/trades/import-csv', {
+			method: 'POST',
+			body: JSON.stringify({ trades })
+		});
+	}
+
+	async fetchPropReportsTrades(
+		site: string,
+		username: string,
+		password: string,
+		fromDate?: string,
+		toDate?: string
+	): Promise<any[]> {
+		return this.request('/api/integrations/propreports/fetch', {
+			method: 'POST',
+			body: JSON.stringify({
+				site,
+				username,
+				password,
+				from_date: fromDate,
+				to_date: toDate
+			})
 		});
 	}
 

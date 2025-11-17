@@ -97,6 +97,11 @@ export async function importCSV(
 		const row = rows[i];
 		const rowNum = i + 2; // +2 for header row and 0-index
 
+		// Apply row filter if provided (e.g., to filter only "Execute" events for DAS Trader)
+		if (platform.rowFilter && !platform.rowFilter(row)) {
+			continue; // Skip this row
+		}
+
 		try {
 			const execution = parseExecution(row, platform, tradingDate, rowNum);
 			executions.push(execution);

@@ -3,9 +3,16 @@ import type { PlatformSchema } from '$lib/types/import';
 export const propReportsSchema: PlatformSchema = {
 	id: 'prop-reports',
 	name: 'PropReports',
-	description: 'Import from PropReports detailed trade export',
+	description: 'Import from PropReports CSV export or API',
 	requiresDate: false, // PropReports includes full date/time
 	groupExecutions: false, // PropReports exports positions, not individual executions
+	supportsAPI: true,
+	apiConfig: {
+		requiresSite: true,
+		requiresAuth: true,
+		siteLabel: 'PropReports Site',
+		sitePlaceholder: 'e.g., stgmarkets.propreports.com'
+	},
 	columns: {
 		symbol: ['Symbol', 'Ticker', 'Instrument'],
 		side: ['Side', 'Direction', 'Type'],

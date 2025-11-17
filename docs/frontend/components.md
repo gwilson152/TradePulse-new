@@ -13,10 +13,16 @@ src/lib/components/
 │   ├── Card.svelte
 │   ├── Input.svelte
 │   ├── Modal.svelte
-│   └── Table.svelte
+│   ├── UserMenu.svelte        # ✅ User dropdown menu
+│   ├── FormSlideOver.svelte   # ✅ Slide-over panel with tabs
+│   └── FileDropzone.svelte    # ✅ Drag-and-drop file upload
 ├── trading/              # Trading-specific
 │   ├── PnLBadge.svelte
-│   └── MetricCard.svelte
+│   ├── MetricCard.svelte
+│   ├── CSVImportSlideOver.svelte  # ✅ CSV import workflow
+│   └── TradeDetailSlideOver.svelte # ✅ Trade details panel
+├── settings/             # Settings components
+│   └── SetPasswordModal.svelte    # ✅ Password setup/change
 ├── journal/              # Journal components
 ├── notifications/        # Notification system
 └── layout/               # Layout components
