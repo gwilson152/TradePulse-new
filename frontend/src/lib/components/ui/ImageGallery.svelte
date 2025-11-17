@@ -134,7 +134,6 @@
 			<div
 				class="relative max-w-7xl max-h-full"
 				onclick={(e) => e.stopPropagation()}
-				onkeydown={() => {}}
 				role="img"
 				aria-label="Lightbox image"
 			>

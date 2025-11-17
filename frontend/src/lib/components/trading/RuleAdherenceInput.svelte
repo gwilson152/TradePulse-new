@@ -114,9 +114,9 @@
 
 	<!-- Score selection -->
 	<div class="space-y-2 mb-3">
-		<label class="block text-xs font-semibold text-surface-700 dark:text-surface-300 uppercase tracking-wide">
+		<div class="block text-xs font-semibold text-surface-700 dark:text-surface-300 uppercase tracking-wide">
 			Adherence Score
-		</label>
+		</div>
 		<div class="grid grid-cols-5 gap-2">
 			{#each scoreOptions as option}
 				<button
@@ -140,10 +140,11 @@
 	<!-- Notes (auto-expand for non-perfect scores) -->
 	{#if expanded || score < 100}
 		<div class="mt-3 pt-3 border-t border-surface-200 dark:border-surface-700">
-			<label class="block text-xs font-semibold text-surface-700 dark:text-surface-300 mb-2 uppercase tracking-wide">
+			<label for="rule-notes-{rule.id}" class="block text-xs font-semibold text-surface-700 dark:text-surface-300 mb-2 uppercase tracking-wide">
 				Explanation {score < 100 ? '(Required)' : '(Optional)'}
 			</label>
 			<textarea
+				id="rule-notes-{rule.id}"
 				bind:value={notes}
 				onchange={updateAdherence}
 				class="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 text-sm"

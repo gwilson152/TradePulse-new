@@ -4,7 +4,7 @@
 
 This document tracks the implementation status of the TradePulse frontend, including the v2.0 complete UI redesign with macOS-inspired layout, glassmorphism design system, position lifecycle model, rule adherence tracking system, and comprehensive journal features.
 
-**Last Updated:** 2025-01-13
+**Last Updated:** 2025-01-17
 
 ## 🎨 v2.0 Design System - COMPLETE
 
@@ -96,6 +96,118 @@ All 15+ accessibility warnings from Svelte compiler have been resolved:
 - ✅ **docs/frontend/design-system.md** - Comprehensive design guide (400+ lines)
 
 ---
+
+## 📊 January 2025 Updates - Server-Side Pagination & Timezone Support
+
+**Status:** Fully Implemented
+
+### Server-Side Pagination
+
+**Implemented Components:**
+- ✅ **Updated API Client** - Added `requestWithPagination()` method and `PaginatedResponse<T>` interface
+- ✅ **Trades List Page** - Complete redesign with data table format and server-side pagination
+- ✅ **Pagination Controls** - Previous/Next buttons with smart page number display and ellipsis
+- ✅ **Page Size Selector** - Options for 10, 25, 50, 100 items per page
+- ✅ **Results Counter** - Shows "Showing X-Y of Z results" with live updates
+
+**Key Features:**
+- All data fetching done at database level for performance
+- Query parameters: `limit`, `offset`
+- Response includes pagination metadata: `total`, `page`, `page_size`, `total_pages`
+- Filters reset to page 1 when changed
+- Reactive effects track filter and page changes to trigger reload
+
+**Implementation:**
+```typescript
+// API Client (client.ts)
+async getTrades(params?: {
+  limit?: number;
+  offset?: number;
+  // ... other filters
+}): Promise<PaginatedResponse<any[]>>
+
+// Page component (trades/+page.svelte)
+const response = await apiClient.getTrades({
+  limit: pageSize,
+  offset: (currentPage - 1) * pageSize,
+  // ... filters
+});
+trades = response.data;
+totalTrades = response.pagination.total;
+```
+
+### Timezone Support
+
+**Implemented Components:**
+- ✅ **Settings Store** - `lib/stores/settings.ts` with timezone configuration
+- ✅ **User Preferences** - Timezone, market time vs local time, date/time format options
+- ✅ **localStorage Persistence** - Settings saved across sessions
+- ✅ **Format Helpers** - `formatDateTime()`, `getTimezoneAbbr()` utility functions
+- ✅ **Common Timezone Presets** - NYSE, NASDAQ, Chicago, LA, London, Tokyo, etc.
+
+**Settings Interface:**
+```typescript
+interface UserSettings {
+  timezone: string;  // IANA timezone (e.g., "America/New_York")
+  useMarketTime: boolean;  // true = market time, false = local time
+  dateFormat: 'short' | 'medium' | 'long';
+  timeFormat: '12h' | '24h';
+}
+```
+
+**Date/Time Display:**
+- Shows both date and time in trades list
+- Respects user timezone preference
+- Supports 12h/24h time formats
+- Short/medium/long date formats
+
+**File Location:** `frontend/src/lib/stores/settings.ts`
+
+### Advanced Filtering
+
+**Status:** Fully Implemented
+
+**Filter Types:**
+- ✅ **Trade Type** - LONG/SHORT/All
+- ✅ **Status** - Open/Closed/Winners/Losers/All
+- ✅ **Date Range** - Today, Last 7/30/90 Days, This Year, All
+- ✅ **Strategy** - Dynamic dropdown populated from existing trades
+- ✅ **P&L Range** - Min/Max profit/loss filters
+- ✅ **Symbol Search** - Real-time text search
+
+**UI Features:**
+- Advanced filter toggle button with active filter count badge
+- Collapsible filter panel
+- Clear all filters button
+- Live result count display
+- All filters processed server-side for performance
+
+### Trades Page Redesign
+
+**Status:** Complete
+
+**Changes:**
+- ✅ Data table format with proper `<table>` element
+- ✅ Compact row spacing (`py-2.5`) for more entries on screen
+- ✅ Mouse-following tooltip with detailed trade information
+- ✅ Mobile long-press support (500ms) for tooltips
+- ✅ Columns: Symbol, Type, Date & Time, Qty, Entry, Exit, P&L, Status
+- ✅ Hover states and visual feedback
+- ✅ Responsive design for mobile/tablet/desktop
+
+### Bug Fixes - Pagination & Filters
+
+**Fixed Issues:**
+1. ✅ **Losers Filter Bug** - Changed comparison `===` to assignment `=` (line 226)
+2. ✅ **API Response Format** - Updated to extract `response.data` and `response.pagination`
+3. ✅ **Function Call Error** - Changed `totalPages()` to `totalPages` (state variable)
+4. ✅ **Null Reference Errors** - Added null checks for `trades` in derived values
+5. ✅ **Empty State Check** - Fixed `trades.length === 0` without null check
+6. ✅ **Reactive Effect Loops** - Implemented state tracking with `lastFilterState` to prevent infinite loops
+7. ✅ **Filter Timing** - Skip initial effect runs, only reload on actual changes
+8. ✅ **Svelte 5 `{@const}` Error** - Fixed placement in control flow blocks
+
+**File Location:** `frontend/src/routes/app/trades/+page.svelte`
 
 ---
 

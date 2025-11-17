@@ -59,7 +59,7 @@
 	<title>Login - TradePulse</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center p-4">
+<div class="min-h-screen flex items-center justify-center p-4 overflow-y-auto">
 	<div class="w-full max-w-md">
 		<div class="text-center mb-8">
 			<h1 class="text-3xl font-bold text-white mb-2">TradePulse</h1>
@@ -191,8 +191,14 @@
 			{/if}
 		</Card>
 
-		<div class="text-center mt-6">
-			<a href="/" class="text-sm text-white/80 hover:text-white">
+		<div class="text-center mt-6 space-y-2">
+			<p class="text-white/80">
+				Don't have an account?
+				<a href="/auth/signup" class="text-white hover:text-white/80 font-medium underline">
+					Sign up
+				</a>
+			</p>
+			<a href="/" class="block text-sm text-white/80 hover:text-white">
 				← Back to home
 			</a>
 		</div>
@@ -202,5 +208,7 @@
 <style>
 	:global(body) {
 		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		background-attachment: fixed;
+		min-height: 100vh;
 	}
 </style>

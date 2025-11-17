@@ -4,7 +4,9 @@
       "Bash(go get:*)",
       "Bash(go install:*)",
       "WebFetch(domain:propreports.atlassian.net)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(go build:*)"
     ],
     "deny": [],
     "ask": []

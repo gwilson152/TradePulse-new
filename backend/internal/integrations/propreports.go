@@ -13,6 +13,13 @@ import (
 	"github.com/tradepulse/api/internal/models"
 )
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 type PropReportsClient struct {
 	BaseURL  string
 	Username string
@@ -115,6 +122,48 @@ func (c *PropReportsClient) Logout() error {
 	return nil
 }
 
+// GetAccounts fetches the list of accounts
+func (c *PropReportsClient) GetAccounts() ([]string, error) {
+	apiURL := fmt.Sprintf("%s/api.php", c.BaseURL)
+
+	data := url.Values{}
+	data.Set("action", "accounts")
+	data.Set("token", c.token)
+
+	resp, err := c.client.PostForm(apiURL, data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch accounts: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("accounts request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse CSV response
+	csvReader := csv.NewReader(resp.Body)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse accounts CSV: %w", err)
+	}
+
+	// Extract account IDs (skip header and trailer)
+	accountIds := make([]string, 0)
+	for i, record := range records {
+		if i == 0 || len(record) < 1 {
+			continue // Skip header
+		}
+		// Skip "Page X/Y" trailer
+		if strings.HasPrefix(record[0], "Page ") {
+			continue
+		}
+		accountIds = append(accountIds, record[0])
+	}
+
+	return accountIds, nil
+}
+
 // FetchTrades fetches trades (fills) from PropReports
 func (c *PropReportsClient) FetchTrades(fromDate, toDate string) ([]models.Trade, error) {
 	// Login first
@@ -123,8 +172,15 @@ func (c *PropReportsClient) FetchTrades(fromDate, toDate string) ([]models.Trade
 	}
 	defer c.Logout()
 
-	// Get account ID (we'll query all accounts with groupId=-2)
-	apiURL := fmt.Sprintf("%s/api.php", c.BaseURL)
+	// Get list of accounts
+	accountIds, err := c.GetAccounts()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(accountIds) == 0 {
+		return []models.Trade{}, nil
+	}
 
 	// Set date range defaults if not provided
 	if fromDate == "" {
@@ -134,47 +190,311 @@ func (c *PropReportsClient) FetchTrades(fromDate, toDate string) ([]models.Trade
 		toDate = time.Now().Format("2006-01-02") // Today
 	}
 
-	data := url.Values{}
-	data.Set("action", "fills")
-	data.Set("token", c.token)
-	data.Set("groupId", "-2") // All accounts
-	data.Set("startDate", fromDate)
-	data.Set("endDate", toDate)
-	data.Set("page", "1")
+	// Fetch fills for each account
+	allTrades := make([]models.Trade, 0)
 
-	resp, err := c.client.PostForm(apiURL, data)
+	for _, accountId := range accountIds {
+		trades, err := c.fetchFillsForAccount(accountId, fromDate, toDate)
+		if err != nil {
+			// Log error but continue with other accounts
+			continue
+		}
+		allTrades = append(allTrades, trades...)
+	}
+
+	return allTrades, nil
+}
+
+// fetchFillsForAccount fetches fills for a specific account using the detailed report
+func (c *PropReportsClient) fetchFillsForAccount(accountId, fromDate, toDate string) ([]models.Trade, error) {
+	apiURL := fmt.Sprintf("%s/api.php", c.BaseURL)
+
+	// Parse dates
+	startDate, err := time.Parse("2006-01-02", fromDate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch fills: %w", err)
+		return nil, fmt.Errorf("invalid start date: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("fills request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	// Parse CSV response
-	csvReader := csv.NewReader(resp.Body)
-	records, err := csvReader.ReadAll()
+	endDate, err := time.Parse("2006-01-02", toDate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse CSV response: %w", err)
+		return nil, fmt.Errorf("invalid end date: %w", err)
 	}
 
-	if len(records) < 2 {
-		return []models.Trade{}, nil // No data (only header or empty)
+	// PropReports detailed report requires max 1 week of data
+	// We'll query day by day for reliability
+	allTrades := make([]models.Trade, 0)
+
+	for currentDate := startDate; !currentDate.After(endDate); currentDate = currentDate.AddDate(0, 0, 1) {
+		dateStr := currentDate.Format("2006-01-02")
+
+		data := url.Values{}
+		data.Set("action", "report")
+		data.Set("type", "detailed")
+		data.Set("token", c.token)
+		data.Set("accountId", accountId)
+		data.Set("startDate", dateStr)
+		data.Set("endDate", dateStr)
+
+		resp, err := c.client.PostForm(apiURL, data)
+		if err != nil {
+			fmt.Printf("DEBUG: Error fetching report for %s: %v\n", dateStr, err)
+			continue // Skip this day on error
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			fmt.Printf("DEBUG: Non-OK status for %s: %d\n", dateStr, resp.StatusCode)
+			resp.Body.Close()
+			continue // Skip this day
+		}
+
+		// Read response body
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if err != nil {
+			fmt.Printf("DEBUG: Error reading body for %s: %v\n", dateStr, err)
+			continue
+		}
+
+		bodyStr := string(body)
+
+		// Check for "No data available" message
+		if strings.Contains(bodyStr, "No data available") {
+			fmt.Printf("DEBUG: No data available for %s\n", dateStr)
+			continue
+		}
+
+		// Check for week limit error
+		if strings.Contains(bodyStr, "less than a week") {
+			fmt.Printf("DEBUG: Week limit error for %s\n", dateStr)
+			continue
+		}
+
+		fmt.Printf("DEBUG: Processing %s, body length: %d bytes\n", dateStr, len(bodyStr))
+		fmt.Printf("DEBUG: First 200 chars: %s\n", bodyStr[:min(200, len(bodyStr))])
+
+		// Parse CSV - configure reader to handle multiline fields and variable field counts
+		csvReader := csv.NewReader(strings.NewReader(bodyStr))
+		csvReader.LazyQuotes = true
+		csvReader.FieldsPerRecord = -1 // Allow variable number of fields
+		csvReader.TrimLeadingSpace = true
+
+		records, err := csvReader.ReadAll()
+		if err != nil {
+			fmt.Printf("DEBUG: CSV parse error for %s: %v\n", dateStr, err)
+			continue
+		}
+
+		fmt.Printf("DEBUG: Parsed %d CSV records for %s\n", len(records), dateStr)
+
+		// Convert fills to trades for this day
+		dayTrades, err := c.convertDetailedReportToTrades(records, currentDate)
+		if err != nil {
+			fmt.Printf("DEBUG: Convert error for %s: %v\n", dateStr, err)
+			continue
+		}
+
+		fmt.Printf("DEBUG: Generated %d trades for %s\n", len(dayTrades), dateStr)
+		allTrades = append(allTrades, dayTrades...)
 	}
 
-	// Convert fills to trades
-	trades, err := c.convertFillsToTrades(records[1:]) // Skip header
-	if err != nil {
-		return nil, err
+	return allTrades, nil
+}
+
+// convertDetailedReportToTrades converts PropReports detailed report to Trade models
+func (c *PropReportsClient) convertDetailedReportToTrades(records [][]string, tradeDate time.Time) ([]models.Trade, error) {
+	trades := make([]models.Trade, 0)
+
+	var currentSymbol string
+	var fills []PropReportsFill
+
+	for _, record := range records {
+		if len(record) == 0 {
+			continue
+		}
+
+		// Symbol headers - single field that looks like a date or symbol
+		// Examples: "11/14/2025", "AMZE", "CYPH", "BCG - Binah Capital Group, Inc."
+		if len(record) == 1 && record[0] != "" {
+			field := strings.TrimSpace(record[0])
+
+			// Skip date lines
+			if strings.Contains(field, "/") {
+				continue
+			}
+
+			// Process previous symbol's fills if any
+			if currentSymbol != "" && len(fills) > 0 {
+				symbolTrades := c.processFillsForSymbol(currentSymbol, fills, tradeDate)
+				trades = append(trades, symbolTrades...)
+			}
+
+			// Start new symbol - extract just the symbol part if it has a description
+			// "BCG - Binah Capital Group, Inc." -> "BCG"
+			symbolParts := strings.Split(field, " - ")
+			if len(symbolParts) > 0 {
+				currentSymbol = strings.TrimSpace(symbolParts[0])
+			} else {
+				currentSymbol = field
+			}
+
+			fills = make([]PropReportsFill, 0)
+			continue
+		}
+
+		// Check if this is the header row (contains "Time,Order Id,Fill Id,...")
+		if strings.Contains(record[0], "Time") {
+			continue
+		}
+
+		// Check if this is a summary/total row
+		if strings.Contains(record[0], "Total") || strings.Contains(record[0], "Bought") ||
+		   strings.Contains(record[0], "Sold") || strings.Contains(record[0], "Equities") ||
+		   strings.Contains(record[0], "Cash:") || strings.Contains(record[0], "Unrealized:") {
+			continue
+		}
+
+		// Parse fill record (Time, OrderId, FillId, Route, Liq, B/S, Qty, Price, ...)
+		if len(record) >= 8 && currentSymbol != "" {
+			fill := PropReportsFill{
+				DateTime: record[0],
+				Side:     record[5], // B/S column
+				Qty:      record[6],
+				Symbol:   currentSymbol,
+				Price:    record[7],
+			}
+			if len(record) > 10 {
+				fill.Comm = record[10] // Comm column
+			}
+			fills = append(fills, fill)
+		}
+	}
+
+	// Process last symbol
+	if currentSymbol != "" && len(fills) > 0 {
+		symbolTrades := c.processFillsForSymbol(currentSymbol, fills, tradeDate)
+		trades = append(trades, symbolTrades...)
 	}
 
 	return trades, nil
 }
 
+// processFillsForSymbol groups fills by symbol and converts to trades
+func (c *PropReportsClient) processFillsForSymbol(symbol string, fills []PropReportsFill, tradeDate time.Time) []models.Trade {
+	// Separate buys and sells
+	var buys, sells []PropReportsFill
+	for _, fill := range fills {
+		if fill.Side == "B" {
+			buys = append(buys, fill)
+		} else if fill.Side == "S" {
+			sells = append(sells, fill)
+		}
+	}
+
+	// Calculate totals
+	var buyQty, sellQty float64
+	var buyTotal, sellTotal float64
+	var totalFees float64
+	var firstBuyTime, firstSellTime, lastBuyTime, lastSellTime time.Time
+
+	for i, buy := range buys {
+		qty, _ := strconv.ParseFloat(buy.Qty, 64)
+		price, _ := strconv.ParseFloat(buy.Price, 64)
+		comm, _ := strconv.ParseFloat(buy.Comm, 64)
+
+		buyQty += qty
+		buyTotal += qty * price
+		totalFees += comm
+
+		// Parse time (HH:MM:SS format, combine with trade date)
+		timeStr := buy.DateTime
+		if t, err := time.Parse("15:04:05", timeStr); err == nil {
+			fullTime := time.Date(tradeDate.Year(), tradeDate.Month(), tradeDate.Day(),
+				t.Hour(), t.Minute(), t.Second(), 0, tradeDate.Location())
+			if i == 0 {
+				firstBuyTime = fullTime
+			}
+			lastBuyTime = fullTime
+		}
+	}
+
+	for i, sell := range sells {
+		qty, _ := strconv.ParseFloat(sell.Qty, 64)
+		price, _ := strconv.ParseFloat(sell.Price, 64)
+		comm, _ := strconv.ParseFloat(sell.Comm, 64)
+
+		sellQty += qty
+		sellTotal += qty * price
+		totalFees += comm
+
+		// Parse time
+		timeStr := sell.DateTime
+		if t, err := time.Parse("15:04:05", timeStr); err == nil {
+			fullTime := time.Date(tradeDate.Year(), tradeDate.Month(), tradeDate.Day(),
+				t.Hour(), t.Minute(), t.Second(), 0, tradeDate.Location())
+			if i == 0 {
+				firstSellTime = fullTime
+			}
+			lastSellTime = fullTime
+		}
+	}
+
+	// Create trade
+	trades := make([]models.Trade, 0)
+
+	if len(buys) > 0 && len(sells) > 0 {
+		// Complete round trip
+		var tradeType models.TradeType
+		var entryPrice, exitPrice float64
+		var quantity float64
+		var openTime, closeTime time.Time
+
+		if !firstBuyTime.IsZero() && !firstSellTime.IsZero() && firstBuyTime.Before(firstSellTime) {
+			// Long trade (buy first, sell later)
+			tradeType = models.TradeLong
+			entryPrice = buyTotal / buyQty
+			exitPrice = sellTotal / sellQty
+			quantity = buyQty
+			openTime = firstBuyTime
+			closeTime = lastSellTime
+		} else {
+			// Short trade (sell first, buy later)
+			tradeType = models.TradeShort
+			entryPrice = sellTotal / sellQty
+			exitPrice = buyTotal / buyQty
+			quantity = sellQty
+			openTime = firstSellTime
+			closeTime = lastBuyTime
+		}
+
+		// Calculate P&L
+		var pnl float64
+		if tradeType == models.TradeLong {
+			pnl = (exitPrice - entryPrice) * quantity - totalFees
+		} else {
+			pnl = (entryPrice - exitPrice) * quantity - totalFees
+		}
+
+		trade := models.Trade{
+			Symbol:     symbol,
+			TradeType:  tradeType,
+			Quantity:   quantity,
+			EntryPrice: entryPrice,
+			ExitPrice:  &exitPrice,
+			OpenedAt:   openTime,
+			ClosedAt:   &closeTime,
+			PnL:        &pnl,
+			Fees:       totalFees,
+		}
+
+		trades = append(trades, trade)
+	}
+
+	return trades
+}
+
 // convertFillsToTrades converts PropReports fill records (CSV rows) into Trade models
 // PropReports returns individual fills, but we need to group them into trades (positions)
+// NOTE: This is the old method, kept for compatibility
 func (c *PropReportsClient) convertFillsToTrades(records [][]string) ([]models.Trade, error) {
 	// Group fills by symbol + order to reconstruct trades
 	type TradeKey struct {

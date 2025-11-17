@@ -15,12 +15,17 @@ func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, e
 	var user models.User
 	var lastLogin sql.NullTime
 	var passwordHash sql.NullString
+	var planSelectedAt sql.NullTime
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, email, COALESCE(password_hash, '') as password_hash, created_at, last_login
+		SELECT id, email, COALESCE(password_hash, '') as password_hash,
+		       plan_type, plan_status, plan_selected_at,
+		       created_at, last_login
 		FROM users
 		WHERE email = $1
-	`, email).Scan(&user.ID, &user.Email, &passwordHash, &user.CreatedAt, &lastLogin)
+	`, email).Scan(&user.ID, &user.Email, &passwordHash,
+		&user.PlanType, &user.PlanStatus, &planSelectedAt,
+		&user.CreatedAt, &lastLogin)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -31,6 +36,10 @@ func (db *DB) GetUserByEmail(ctx context.Context, email string) (*models.User, e
 
 	if lastLogin.Valid {
 		user.LastLogin = &lastLogin.Time
+	}
+
+	if planSelectedAt.Valid {
+		user.PlanSelectedAt = &planSelectedAt.Time
 	}
 
 	if passwordHash.Valid && passwordHash.String != "" {
@@ -46,12 +55,17 @@ func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, erro
 	var user models.User
 	var lastLogin sql.NullTime
 	var passwordHash sql.NullString
+	var planSelectedAt sql.NullTime
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, email, COALESCE(password_hash, '') as password_hash, created_at, last_login
+		SELECT id, email, COALESCE(password_hash, '') as password_hash,
+		       plan_type, plan_status, plan_selected_at,
+		       created_at, last_login
 		FROM users
 		WHERE id = $1
-	`, id).Scan(&user.ID, &user.Email, &passwordHash, &user.CreatedAt, &lastLogin)
+	`, id).Scan(&user.ID, &user.Email, &passwordHash,
+		&user.PlanType, &user.PlanStatus, &planSelectedAt,
+		&user.CreatedAt, &lastLogin)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -62,6 +76,10 @@ func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, erro
 
 	if lastLogin.Valid {
 		user.LastLogin = &lastLogin.Time
+	}
+
+	if planSelectedAt.Valid {
+		user.PlanSelectedAt = &planSelectedAt.Time
 	}
 
 	if passwordHash.Valid && passwordHash.String != "" {
@@ -75,9 +93,9 @@ func (db *DB) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, erro
 // CreateUser creates a new user
 func (db *DB) CreateUser(ctx context.Context, user *models.User) error {
 	_, err := db.ExecContext(ctx, `
-		INSERT INTO users (id, email, created_at, last_login)
-		VALUES ($1, $2, $3, $4)
-	`, user.ID, user.Email, user.CreatedAt, user.LastLogin)
+		INSERT INTO users (id, email, plan_type, plan_status, plan_selected_at, created_at, last_login)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, user.ID, user.Email, user.PlanType, user.PlanStatus, user.PlanSelectedAt, user.CreatedAt, user.LastLogin)
 
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
@@ -190,12 +208,15 @@ func (db *DB) VerifyUserPassword(ctx context.Context, email string, passwordHash
 	var user models.User
 	var lastLogin sql.NullTime
 	var storedHash sql.NullString
+	var planSelectedAt sql.NullTime
 
 	err := db.QueryRowContext(ctx, `
-		SELECT id, email, password_hash, created_at, last_login
+		SELECT id, email, password_hash, plan_type, plan_status, plan_selected_at, created_at, last_login
 		FROM users
 		WHERE email = $1 AND password_hash IS NOT NULL
-	`, email).Scan(&user.ID, &user.Email, &storedHash, &user.CreatedAt, &lastLogin)
+	`, email).Scan(&user.ID, &user.Email, &storedHash,
+		&user.PlanType, &user.PlanStatus, &planSelectedAt,
+		&user.CreatedAt, &lastLogin)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found or no password set")
@@ -206,6 +227,10 @@ func (db *DB) VerifyUserPassword(ctx context.Context, email string, passwordHash
 
 	if lastLogin.Valid {
 		user.LastLogin = &lastLogin.Time
+	}
+
+	if planSelectedAt.Valid {
+		user.PlanSelectedAt = &planSelectedAt.Time
 	}
 
 	if storedHash.Valid {

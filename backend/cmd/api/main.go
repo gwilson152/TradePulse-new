@@ -141,6 +141,7 @@ func main() {
 		// Public routes (no auth required)
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/request-magic-link", handlers.RequestMagicLink(app.db, app.logger))
+			r.Post("/signup", handlers.SignupWithPlan(app.db, app.logger))
 			r.Get("/verify", handlers.VerifyMagicLink(app.db, app.logger, cfg.jwtSecret, cfg.jwtExpiry))
 			r.Post("/login", handlers.LoginWithPassword(app.db, app.logger, cfg.jwtSecret, cfg.jwtExpiry))
 		})
@@ -174,6 +175,9 @@ func main() {
 			r.Put("/journal/{id}", handlers.UpdateJournalEntry(app.db, app.logger))
 			r.Delete("/journal/{id}", handlers.DeleteJournalEntry(app.db, app.logger))
 
+			// Journal entries by trade
+			r.Get("/trades/{tradeId}/journal", handlers.GetJournalEntriesByTradeID(app.db, app.logger))
+
 			// Attachments
 			r.Post("/journal/{id}/attachments", handlers.UploadAttachment(app.db, app.logger))
 			r.Get("/attachments/{id}", handlers.GetAttachment(app.db, app.logger))
@@ -185,6 +189,18 @@ func main() {
 			r.Get("/tags/{id}", tagsHandler.GetTag)
 			r.Put("/tags/{id}", tagsHandler.UpdateTag)
 			r.Delete("/tags/{id}", tagsHandler.DeleteTag)
+
+			// Rule Sets
+			r.Get("/rulesets", handlers.ListRuleSets(app.db, app.logger))
+			r.Post("/rulesets", handlers.CreateRuleSet(app.db, app.logger))
+			r.Get("/rulesets/{id}", handlers.GetRuleSet(app.db, app.logger))
+			r.Put("/rulesets/{id}", handlers.UpdateRuleSet(app.db, app.logger))
+			r.Delete("/rulesets/{id}", handlers.DeleteRuleSet(app.db, app.logger))
+
+			// Rules within a ruleset
+			r.Post("/rulesets/{ruleSetId}/rules", handlers.CreateRule(app.db, app.logger))
+			r.Put("/rulesets/{ruleSetId}/rules/{ruleId}", handlers.UpdateRule(app.db, app.logger))
+			r.Delete("/rulesets/{ruleSetId}/rules/{ruleId}", handlers.DeleteRule(app.db, app.logger))
 
 			// Metrics
 			r.Get("/metrics/summary", handlers.GetSummaryMetrics(app.db, app.logger))

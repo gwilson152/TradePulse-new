@@ -20,6 +20,11 @@ type RequestMagicLinkInput struct {
 	Email string `json:"email"`
 }
 
+type SignupWithPlanInput struct {
+	Email    string `json:"email"`
+	PlanType string `json:"plan_type"`
+}
+
 type VerifyMagicLinkResponse struct {
 	JWT  string      `json:"jwt"`
 	User models.User `json:"user"`
@@ -95,6 +100,91 @@ func RequestMagicLink(db *database.DB, logger *slog.Logger) http.HandlerFunc {
 
 		writeSuccess(w, http.StatusOK, map[string]string{
 			"message": "Magic link sent to your email",
+		})
+	}
+}
+
+// SignupWithPlan handles user signup with plan selection (Beta - all plans free)
+func SignupWithPlan(db *database.DB, logger *slog.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var input SignupWithPlanInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			writeError(w, http.StatusBadRequest, "INVALID_INPUT", "Invalid request body")
+			return
+		}
+
+		if input.Email == "" {
+			writeError(w, http.StatusBadRequest, "INVALID_EMAIL", "Email is required")
+			return
+		}
+
+		if input.PlanType == "" {
+			input.PlanType = "starter" // Default plan
+		}
+
+		// Validate plan type
+		validPlans := map[string]bool{
+			"starter": true,
+			"pro":     true,
+			"premium": true,
+		}
+		if !validPlans[input.PlanType] {
+			writeError(w, http.StatusBadRequest, "INVALID_PLAN", "Invalid plan type")
+			return
+		}
+
+		// Check if user already exists
+		existingUser, err := db.GetUserByEmail(r.Context(), input.Email)
+		if err == nil && existingUser != nil {
+			writeError(w, http.StatusConflict, "USER_EXISTS", "User already exists. Please sign in instead.")
+			return
+		}
+
+		// Create new user with selected plan
+		now := time.Now()
+		user := &models.User{
+			ID:             uuid.New(),
+			Email:          input.Email,
+			PlanType:       input.PlanType,
+			PlanStatus:     "beta_free",
+			PlanSelectedAt: &now,
+			CreatedAt:      now,
+			LastLogin:      &now,
+		}
+
+		if err := db.CreateUser(r.Context(), user); err != nil {
+			logger.Error("Failed to create user", "error", err, "email", input.Email)
+			writeError(w, http.StatusInternalServerError, "USER_CREATE_ERROR", "Failed to create user")
+			return
+		}
+
+		// Generate magic link token
+		tokenBytes := make([]byte, 32)
+		if _, err := rand.Read(tokenBytes); err != nil {
+			logger.Error("Failed to generate token", "error", err)
+			writeError(w, http.StatusInternalServerError, "TOKEN_GENERATE_ERROR", "Failed to generate token")
+			return
+		}
+		token := hex.EncodeToString(tokenBytes)
+
+		// Store token with 15-minute expiry
+		expiresAt := time.Now().Add(15 * time.Minute)
+		if err := db.StoreMagicLinkToken(r.Context(), user.ID, token, expiresAt); err != nil {
+			logger.Error("Failed to store token", "error", err, "userId", user.ID)
+			writeError(w, http.StatusInternalServerError, "TOKEN_STORE_ERROR", "Failed to store token")
+			return
+		}
+
+		// TODO: Send email with magic link
+		// For now, just log it
+		logger.Info("Signup with plan - Magic link generated",
+			"email", input.Email,
+			"plan", input.PlanType,
+			"token", token,
+			"link", "https://tradepulse.drivenw.com/auth/verify?token="+token)
+
+		writeSuccess(w, http.StatusOK, map[string]string{
+			"message": "Account created! Magic link sent to your email",
 		})
 	}
 }

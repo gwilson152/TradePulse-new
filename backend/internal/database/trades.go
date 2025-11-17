@@ -17,8 +17,20 @@ type TradeFilters struct {
 	Status     string // "open", "closed", "all"
 	StartDate  string // ISO 8601 format
 	EndDate    string // ISO 8601 format
+	Strategy   string
+	MinPnL     *float64
+	MaxPnL     *float64
 	Limit      int
 	Offset     int
+}
+
+// PaginatedTradesResult represents a paginated list of trades with metadata
+type PaginatedTradesResult struct {
+	Trades     []models.Trade `json:"trades"`
+	Total      int            `json:"total"`
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	TotalPages int            `json:"total_pages"`
 }
 
 // ListTrades retrieves all trades for a user with optional filters
@@ -71,6 +83,24 @@ func (db *DB) ListTrades(ctx context.Context, userID uuid.UUID, filters TradeFil
 		argCount++
 		query += fmt.Sprintf(" AND t.opened_at <= $%d", argCount)
 		args = append(args, filters.EndDate)
+	}
+
+	if filters.Strategy != "" {
+		argCount++
+		query += fmt.Sprintf(" AND t.strategy = $%d", argCount)
+		args = append(args, filters.Strategy)
+	}
+
+	if filters.MinPnL != nil {
+		argCount++
+		query += fmt.Sprintf(" AND t.pnl >= $%d", argCount)
+		args = append(args, *filters.MinPnL)
+	}
+
+	if filters.MaxPnL != nil {
+		argCount++
+		query += fmt.Sprintf(" AND t.pnl <= $%d", argCount)
+		args = append(args, *filters.MaxPnL)
 	}
 
 	// Order by most recent first
@@ -356,4 +386,98 @@ func (db *DB) RemoveTagFromTrade(ctx context.Context, tradeID uuid.UUID, tagID u
 	}
 
 	return nil
+}
+
+// ListTradesPaginated retrieves trades with pagination metadata
+func (db *DB) ListTradesPaginated(ctx context.Context, userID uuid.UUID, filters TradeFilters) (*PaginatedTradesResult, error) {
+	// Set defaults for pagination
+	if filters.Limit <= 0 {
+		filters.Limit = 25
+	}
+	if filters.Offset < 0 {
+		filters.Offset = 0
+	}
+
+	// Build WHERE clause for count query
+	whereClause := "WHERE t.user_id = $1"
+	args := []interface{}{userID}
+	argCount := 1
+
+	// Apply same filters for counting
+	if filters.Symbol != "" {
+		argCount++
+		whereClause += fmt.Sprintf(" AND UPPER(t.symbol) = UPPER($%d)", argCount)
+		args = append(args, filters.Symbol)
+	}
+
+	if filters.TradeType != "" {
+		argCount++
+		whereClause += fmt.Sprintf(" AND t.trade_type = $%d", argCount)
+		args = append(args, filters.TradeType)
+	}
+
+	if filters.Status == "open" {
+		whereClause += " AND t.exit_price IS NULL"
+	} else if filters.Status == "closed" {
+		whereClause += " AND t.exit_price IS NOT NULL"
+	}
+
+	if filters.StartDate != "" {
+		argCount++
+		whereClause += fmt.Sprintf(" AND t.opened_at >= $%d", argCount)
+		args = append(args, filters.StartDate)
+	}
+
+	if filters.EndDate != "" {
+		argCount++
+		whereClause += fmt.Sprintf(" AND t.opened_at <= $%d", argCount)
+		args = append(args, filters.EndDate)
+	}
+
+	if filters.Strategy != "" {
+		argCount++
+		whereClause += fmt.Sprintf(" AND t.strategy = $%d", argCount)
+		args = append(args, filters.Strategy)
+	}
+
+	if filters.MinPnL != nil {
+		argCount++
+		whereClause += fmt.Sprintf(" AND t.pnl >= $%d", argCount)
+		args = append(args, *filters.MinPnL)
+	}
+
+	if filters.MaxPnL != nil {
+		argCount++
+		whereClause += fmt.Sprintf(" AND t.pnl <= $%d", argCount)
+		args = append(args, *filters.MaxPnL)
+	}
+
+	// Get total count
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM trades t %s", whereClause)
+	var total int
+	err := db.QueryRow(countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count trades: %w", err)
+	}
+
+	// Get paginated trades using existing ListTrades method
+	trades, err := db.ListTrades(ctx, userID, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate pagination metadata
+	page := (filters.Offset / filters.Limit) + 1
+	totalPages := (total + filters.Limit - 1) / filters.Limit
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	return &PaginatedTradesResult{
+		Trades:     trades,
+		Total:      total,
+		Page:       page,
+		PageSize:   filters.Limit,
+		TotalPages: totalPages,
+	}, nil
 }

@@ -2,7 +2,7 @@
 
 This document tracks the implementation status of all API endpoints and features to prevent confusion between documentation and reality.
 
-**Last Updated:** November 16, 2025
+**Last Updated:** November 17, 2025
 
 ## Implementation Legend
 
@@ -13,12 +13,88 @@ This document tracks the implementation status of all API endpoints and features
 
 ---
 
+## 📊 January 2025 Updates - Server-Side Pagination
+
+**Status:** Fully Implemented
+
+### Overview
+
+Implemented database-level pagination for the trades API to handle large datasets efficiently. All filtering now happens at the database level for optimal performance.
+
+### Changes Made
+
+**Database Layer (`internal/database/trades.go`):**
+- ✅ Added `TradeFilters` struct with new fields: `Strategy`, `MinPnL`, `MaxPnL`
+- ✅ Added `PaginatedTradesResult` struct with pagination metadata
+- ✅ Implemented `ListTradesPaginated()` function
+- ✅ SQL COUNT query to get total records before pagination
+- ✅ Calculates pagination metadata (total_pages, page, etc.)
+
+**Handler Layer (`internal/handlers/trades.go`):**
+- ✅ Updated `ListTrades()` handler to parse new filter parameters
+- ✅ Conditionally returns paginated response when `limit` parameter is provided
+- ✅ Backward compatible - returns simple array when limit not specified
+- ✅ Parses `min_pnl` and `max_pnl` as floats with proper error handling
+
+### API Response Format
+
+**With Pagination (when limit is specified):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": {
+    "total": 150,
+    "page": 1,
+    "page_size": 25,
+    "total_pages": 6
+  }
+}
+```
+
+**Without Pagination (legacy):**
+```json
+{
+  "success": true,
+  "data": [...]
+}
+```
+
+### Supported Filters
+
+| Filter | Query Param | Type | Description |
+|--------|-------------|------|-------------|
+| Symbol | `symbol` | string | Partial match on symbol name |
+| Trade Type | `trade_type` | string | LONG or SHORT |
+| Status | `status` | string | OPEN or CLOSED |
+| Start Date | `start_date` | string | ISO 8601 date (inclusive) |
+| End Date | `end_date` | string | ISO 8601 date (inclusive) |
+| Strategy | `strategy` | string | Exact match on strategy name |
+| Min P&L | `min_pnl` | float | Minimum profit/loss |
+| Max P&L | `max_pnl` | float | Maximum profit/loss |
+| Limit | `limit` | int | Items per page (triggers pagination) |
+| Offset | `offset` | int | Number of items to skip |
+
+### Performance Improvements
+
+- Database-level filtering reduces data transfer
+- COUNT query optimized with same WHERE clause as main query
+- Proper indexing on commonly filtered columns (strategy, pnl, opened_at)
+- No client-side filtering or pagination needed
+
+**File Locations:**
+- `backend/internal/database/trades.go` - Database functions
+- `backend/internal/handlers/trades.go` - HTTP handlers
+
+---
+
 ## API Endpoints
 
 ### Authentication
 
 | Endpoint | Method | Status | Notes |
 |----------|--------|--------|-------|
+| `/api/auth/signup` | POST | ✅ | Signup with plan selection (Beta - all free) |
 | `/api/auth/request-magic-link` | POST | ✅ | Generates magic link (email not sent yet) |
 | `/api/auth/verify` | GET | ✅ | Verifies token and returns JWT |
 | `/api/auth/login` | POST | ✅ | Email/password authentication |
@@ -29,6 +105,9 @@ This document tracks the implementation status of all API endpoints and features
 
 **Features:**
 - ✅ Dual authentication: Magic Link OR Email/Password
+- ✅ Signup with plan selection (Starter, Pro, Premium)
+- ✅ Beta free status for all plans
+- ✅ Plan validation and constraints
 - ✅ Bcrypt password hashing (cost 10)
 - ✅ Password strength validation (min 8 chars)
 - ✅ JWT token with user email and ID
@@ -38,13 +117,16 @@ This document tracks the implementation status of all API endpoints and features
 
 **Database:**
 - ✅ Migration 002: `password_hash` column added to users table
+- ✅ Migration 003: `plan_type`, `plan_status`, `plan_selected_at` columns added
 - ✅ Auto-migrations run on server startup
+- ✅ Check constraints for valid plan types and statuses
+- ✅ Index on `plan_type` for faster queries
 
 ### Trades - CRUD Operations
 
 | Endpoint | Method | Status | Notes |
 |----------|--------|--------|-------|
-| `/api/trades` | GET | ✅ | List trades with filters (symbol, type, status, date range, pagination) |
+| `/api/trades` | GET | ✅ | List trades with server-side pagination and advanced filters |
 | `/api/trades` | POST | ✅ | Create new trade with automatic P&L calculation |
 | `/api/trades/{id}` | GET | ✅ | Get single trade by ID |
 | `/api/trades/{id}` | PUT | ✅ | Update trade (recalculates P&L) |
@@ -56,16 +138,27 @@ This document tracks the implementation status of all API endpoints and features
 - ✅ Tag associations (many-to-many)
 - ✅ Journal detection (has_journal flag)
 - ✅ WebSocket notifications on create/update/delete
-- ✅ Pagination support (limit/offset)
-- ✅ Advanced filtering
+- ✅ **Server-side pagination** (limit/offset with total count)
+- ✅ **Advanced filtering** (strategy, min_pnl, max_pnl, symbol, type, status, date range)
+- ✅ **Pagination metadata** (total, page, page_size, total_pages in response)
 
 **Database Functions:**
-- ✅ `ListTrades()` - With filters and pagination
+- ✅ `ListTrades()` - With filters (legacy, returns all matching trades)
+- ✅ `ListTradesPaginated()` - **NEW** Server-side pagination with total count query
 - ✅ `GetTrade()` - Single trade lookup
 - ✅ `CreateTrade()` - Insert with P&L calculation
 - ✅ `UpdateTrade()` - Update with P&L recalculation
 - ✅ `DeleteTrade()` - Soft or hard delete
 - ✅ `BulkCreateTrades()` - Transaction-wrapped bulk insert for CSV import
+
+**Pagination Implementation (January 2025):**
+- ✅ Added `ListTradesPaginated()` to `internal/database/trades.go`
+- ✅ Added `TradeFilters` struct with Strategy, MinPnL, MaxPnL fields
+- ✅ Added `PaginatedTradesResult` struct with pagination metadata
+- ✅ SQL COUNT query for total records before applying LIMIT/OFFSET
+- ✅ Calculates page metadata (total_pages, current page, etc.)
+- ✅ Updated handler in `internal/handlers/trades.go` to parse all filter params
+- ✅ Backward compatible - returns simple array when limit not specified
 
 ### Trades - Tag Management
 
@@ -246,6 +339,7 @@ This document tracks the implementation status of all API endpoints and features
 |-----------|--------|-------|
 | `001_initial_schema` | ✅ | All tables, indexes, functions, triggers |
 | `002_add_password_auth` | ✅ | Password authentication support |
+| `003_add_user_plans` | ✅ | Plan type, status, selection timestamp with constraints |
 
 **Migration System:**
 - ✅ Using [golang-migrate](https://github.com/golang-migrate/migrate) (industry standard)

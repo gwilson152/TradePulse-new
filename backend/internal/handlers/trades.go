@@ -59,6 +59,19 @@ func (h *TradesHandler) ListTrades(w http.ResponseWriter, r *http.Request) {
 		Status:    r.URL.Query().Get("status"),
 		StartDate: r.URL.Query().Get("start_date"),
 		EndDate:   r.URL.Query().Get("end_date"),
+		Strategy:  r.URL.Query().Get("strategy"),
+	}
+
+	// Parse P&L filters
+	if minPnLStr := r.URL.Query().Get("min_pnl"); minPnLStr != "" {
+		if minPnL, err := strconv.ParseFloat(minPnLStr, 64); err == nil {
+			filters.MinPnL = &minPnL
+		}
+	}
+	if maxPnLStr := r.URL.Query().Get("max_pnl"); maxPnLStr != "" {
+		if maxPnL, err := strconv.ParseFloat(maxPnLStr, 64); err == nil {
+			filters.MaxPnL = &maxPnL
+		}
 	}
 
 	// Parse pagination
@@ -73,16 +86,37 @@ func (h *TradesHandler) ListTrades(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	trades, err := h.db.ListTrades(r.Context(), userID, filters)
-	if err != nil {
-		sendError(w, http.StatusInternalServerError, "Failed to fetch trades", err)
-		return
-	}
+	// Use paginated method if page/limit is specified
+	if filters.Limit > 0 {
+		result, err := h.db.ListTradesPaginated(r.Context(), userID, filters)
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "Failed to fetch trades", err)
+			return
+		}
 
-	sendJSON(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-		"data":    trades,
-	})
+		sendJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data":    result.Trades,
+			"pagination": map[string]interface{}{
+				"total":       result.Total,
+				"page":        result.Page,
+				"page_size":   result.PageSize,
+				"total_pages": result.TotalPages,
+			},
+		})
+	} else {
+		// Return all trades without pagination
+		trades, err := h.db.ListTrades(r.Context(), userID, filters)
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "Failed to fetch trades", err)
+			return
+		}
+
+		sendJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"data":    trades,
+		})
+	}
 }
 
 // GetTrade handles GET /api/trades/{id}

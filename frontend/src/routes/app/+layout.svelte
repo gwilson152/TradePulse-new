@@ -76,6 +76,7 @@
 		{ href: '/app/dashboard', icon: 'mdi:view-dashboard-outline', label: 'Overview', color: 'text-blue-500' },
 		{ href: '/app/trades', icon: 'mdi:chart-line-variant', label: 'Trades', color: 'text-emerald-500' },
 		{ href: '/app/journal', icon: 'mdi:book-open-page-variant-outline', label: 'Journal', color: 'text-purple-500' },
+		{ href: '/app/rules', icon: 'mdi:checkbox-marked-circle-outline', label: 'Rules', color: 'text-pink-500' },
 		{ href: '/app/analytics', icon: 'mdi:chart-box-outline', label: 'Analytics', color: 'text-orange-500' },
 		{ href: '/app/settings', icon: 'mdi:cog-outline', label: 'Settings', color: 'text-slate-500' }
 	];
@@ -103,7 +104,7 @@
 	<div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
 		<!-- Menu Bar (macOS-style) -->
 		<div class="fixed top-0 left-0 right-0 h-11 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 z-50 flex items-center justify-between px-4">
-			<!-- Left: App Name & Time -->
+			<!-- Left: App Name, Plan & Time -->
 			<div class="flex items-center gap-6">
 				<div class="flex items-center gap-2">
 					<div class="w-2 h-2 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600"></div>
@@ -111,6 +112,11 @@
 						TradePulse
 					</span>
 				</div>
+				{#if currentUser?.plan_type}
+					<span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-gradient-to-r {currentUser.plan_type === 'premium' ? 'from-amber-500 to-orange-500' : currentUser.plan_type === 'pro' ? 'from-purple-500 to-pink-500' : 'from-blue-500 to-cyan-500'} text-white">
+						{currentUser.plan_type.charAt(0).toUpperCase() + currentUser.plan_type.slice(1)}
+					</span>
+				{/if}
 				<span class="text-xs text-slate-600 dark:text-slate-400 font-medium">
 					{formatTime()}
 				</span>

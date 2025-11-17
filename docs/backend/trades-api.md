@@ -23,27 +23,34 @@ Complete documentation for the TradePulse Trades API endpoints.
 
 ## List Trades
 
-Retrieve all trades for the authenticated user with optional filtering and pagination.
+Retrieve all trades for the authenticated user with optional filtering and server-side pagination.
+
+**⚡ Server-Side Pagination:** Efficient database-level pagination for large datasets.
 
 ### Request
 
 ```http
-GET /api/trades?symbol=AAPL&trade_type=LONG&status=closed&start_date=2024-01-01&end_date=2024-12-31&limit=50&offset=0
+GET /api/trades?symbol=AAPL&trade_type=LONG&status=closed&start_date=2024-01-01&end_date=2024-12-31&strategy=momentum&min_pnl=-500&max_pnl=1000&limit=25&offset=0
 ```
 
 ### Query Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `symbol` | string | No | Filter by stock symbol (case-insensitive) |
-| `trade_type` | string | No | Filter by trade type: `LONG` or `SHORT` |
-| `status` | string | No | Filter by status: `all`, `open`, `closed` |
-| `start_date` | string | No | Filter trades opened on or after this date (ISO 8601) |
-| `end_date` | string | No | Filter trades opened on or before this date (ISO 8601) |
-| `limit` | integer | No | Maximum number of results to return |
-| `offset` | integer | No | Number of results to skip (for pagination) |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `symbol` | string | No | - | Filter by stock symbol (case-insensitive) |
+| `trade_type` | string | No | - | Filter by trade type: `LONG` or `SHORT` |
+| `status` | string | No | - | Filter by status: `all`, `open`, `closed` |
+| `start_date` | string | No | - | Filter trades opened on or after this date (ISO 8601) |
+| `end_date` | string | No | - | Filter trades opened on or before this date (ISO 8601) |
+| `strategy` | string | No | - | Filter by trading strategy name |
+| `min_pnl` | float | No | - | Filter trades with P&L >= this value |
+| `max_pnl` | float | No | - | Filter trades with P&L <= this value |
+| `limit` | integer | No | 25 | Maximum number of results per page (max: 100) |
+| `offset` | integer | No | 0 | Number of results to skip (for pagination) |
 
-### Response
+### Response (With Pagination)
+
+When `limit` is specified, the response includes pagination metadata:
 
 ```json
 {
@@ -57,6 +64,9 @@ GET /api/trades?symbol=AAPL&trade_type=LONG&status=closed&start_date=2024-01-01&
       "quantity": 100,
       "entry_price": 150.25,
       "exit_price": 155.50,
+      "stop_loss": 148.00,
+      "take_profit": 156.00,
+      "strategy": "momentum",
       "fees": 2.50,
       "pnl": 522.50,
       "opened_at": "2024-01-15T09:30:00Z",
@@ -66,11 +76,19 @@ GET /api/trades?symbol=AAPL&trade_type=LONG&status=closed&start_date=2024-01-01&
       "has_journal": true,
       "tags": ["breakout", "morning-trade"]
     }
-  ]
+  ],
+  "pagination": {
+    "total": 147,
+    "page": 1,
+    "page_size": 25,
+    "total_pages": 6
+  }
 }
 ```
 
 ### Response Fields
+
+**Trade Object:**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -81,6 +99,10 @@ GET /api/trades?symbol=AAPL&trade_type=LONG&status=closed&start_date=2024-01-01&
 | `quantity` | float | Number of shares |
 | `entry_price` | float | Average entry price |
 | `exit_price` | float | Average exit price (null if still open) |
+| `stop_loss` | float | Stop loss price (optional) |
+| `take_profit` | float | Take profit price (optional) |
+| `strategy` | string | Trading strategy name (optional) |
+| `notes` | string | Trade notes (optional) |
 | `fees` | float | Total fees/commissions |
 | `pnl` | float | Profit/loss (calculated automatically, null if open) |
 | `opened_at` | timestamp | When position was opened |
@@ -89,6 +111,15 @@ GET /api/trades?symbol=AAPL&trade_type=LONG&status=closed&start_date=2024-01-01&
 | `updated_at` | timestamp | When record was last updated |
 | `has_journal` | boolean | Whether a journal entry exists for this trade |
 | `tags` | array | Array of associated tag names |
+
+**Pagination Object (when limit is specified):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total` | integer | Total number of trades matching filters |
+| `page` | integer | Current page number (1-indexed) |
+| `page_size` | integer | Number of items per page |
+| `total_pages` | integer | Total number of pages available |
 
 ### Status Codes
 

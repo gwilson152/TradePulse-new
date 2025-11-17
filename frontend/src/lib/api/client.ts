@@ -5,9 +5,25 @@ const BASE_URL = PUBLIC_API_URL || 'https://api.tradepulse.drivenw.com:9000';
 interface APIResponse<T> {
 	success: boolean;
 	data?: T;
+	pagination?: {
+		total: number;
+		page: number;
+		page_size: number;
+		total_pages: number;
+	};
 	error?: {
 		code: string;
 		message: string;
+	};
+}
+
+export interface PaginatedResponse<T> {
+	data: T;
+	pagination: {
+		total: number;
+		page: number;
+		page_size: number;
+		total_pages: number;
 	};
 }
 
@@ -76,11 +92,45 @@ class APIClient {
 		return result.data as T;
 	}
 
+	async requestWithPagination<T>(
+		endpoint: string,
+		options?: RequestInit
+	): Promise<PaginatedResponse<T>> {
+		const token = this.getAuthToken();
+
+		const response = await fetch(`${BASE_URL}${endpoint}`, {
+			...options,
+			headers: {
+				'Content-Type': 'application/json',
+				...(token && { Authorization: `Bearer ${token}` }),
+				...options?.headers
+			}
+		});
+
+		const result: APIResponse<T> = await response.json();
+
+		if (!result.success) {
+			throw new Error(result.error?.message || 'API request failed');
+		}
+
+		return {
+			data: result.data as T,
+			pagination: result.pagination || { total: 0, page: 1, page_size: 0, total_pages: 0 }
+		};
+	}
+
 	// Auth methods
 	async requestMagicLink(email: string): Promise<{ message: string }> {
 		return this.request('/api/auth/request-magic-link', {
 			method: 'POST',
 			body: JSON.stringify({ email })
+		});
+	}
+
+	async signup(email: string, planType: 'starter' | 'pro' | 'premium'): Promise<{ message: string }> {
+		return this.request('/api/auth/signup', {
+			method: 'POST',
+			body: JSON.stringify({ email, plan_type: planType })
 		});
 	}
 
@@ -124,13 +174,25 @@ class APIClient {
 	async getTrades(params?: {
 		limit?: number;
 		offset?: number;
-		from?: string;
-		to?: string;
 		symbol?: string;
-	}): Promise<any[]> {
-		const query = new URLSearchParams(params as any).toString();
-		const result = await this.request<any[]>(`/api/trades${query ? '?' + query : ''}`);
-		return result || [];
+		trade_type?: string;
+		status?: string;
+		start_date?: string;
+		end_date?: string;
+		strategy?: string;
+		min_pnl?: number;
+		max_pnl?: number;
+	}): Promise<PaginatedResponse<any[]>> {
+		const cleanParams: any = {};
+		if (params) {
+			Object.entries(params).forEach(([key, value]) => {
+				if (value !== undefined && value !== null && value !== '') {
+					cleanParams[key] = value.toString();
+				}
+			});
+		}
+		const query = new URLSearchParams(cleanParams).toString();
+		return this.requestWithPagination<any[]>(`/api/trades${query ? '?' + query : ''}`);
 	}
 
 	async getTradesForDateRange(from: string, to: string): Promise<any[]> {
@@ -207,6 +269,11 @@ class APIClient {
 	}): Promise<{ entries: any[]; total: number }> {
 		const query = new URLSearchParams(params as any).toString();
 		return this.request(`/api/journal?${query}`);
+	}
+
+	async getJournalEntriesByTradeID(tradeId: string): Promise<any[]> {
+		const params = new URLSearchParams({ tradeId });
+		return this.request(`/api/trades/${tradeId}/journal?${params.toString()}`);
 	}
 
 	async createJournalEntry(entry: any): Promise<any> {

@@ -45,6 +45,7 @@
 		{#each state.panels as panel, index}
 			{@const isActive = index === state.activeIndex}
 			{@const offset = (state.panels.length - 1 - index) * 20}
+			{@const Component = panel.component}
 			<div
 				role="button"
 				tabindex="0"
@@ -81,7 +82,6 @@
 
 					<!-- Content -->
 					<div class="flex-1 overflow-y-auto">
-						{@const Component = panel.component}
 						<Component {...panel.props || {}} />
 					</div>
 				</div>

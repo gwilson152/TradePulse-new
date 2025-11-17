@@ -32,11 +32,56 @@ Authorization: Bearer <jwt_token>
 
 ## Authentication
 
+### Signup with Plan Selection
+
+**Endpoint:** `POST /api/auth/signup`
+
+**Description:** Create a new user account with plan selection. Generates a magic link for email verification. All plans are free during Beta.
+
+**Request:**
+```json
+{
+  "email": "trader@example.com",
+  "plan_type": "pro"
+}
+```
+
+**Parameters:**
+- `email` (required): User's email address
+- `plan_type` (optional): Selected plan tier - 'starter', 'pro', or 'premium' (defaults to 'starter')
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Account created! Magic link sent to your email"
+  }
+}
+```
+
+**Status Codes:**
+- `200`: Success - Account created and magic link sent
+- `400`: Invalid email or plan type
+- `409`: User already exists
+
+**Plan Types:**
+- `starter` - Starter Plan ($2.99/month - Free during Beta)
+- `pro` - Pro Plan ($9.99/month - Free during Beta)
+- `premium` - Premium Plan ($14.99/month - Free during Beta)
+
+**Notes:**
+- During Beta, all users are set to `plan_status = 'beta_free'`
+- Magic link expires in 15 minutes
+- If user already exists, returns 409 error
+
+---
+
 ### Request Magic Link
 
 **Endpoint:** `POST /api/auth/request-magic-link`
 
-**Description:** Send a magic link to the user's email address for passwordless authentication.
+**Description:** Send a magic link to the user's email address for passwordless authentication. Creates account if user doesn't exist (defaults to Starter plan).
 
 **Request:**
 ```json
@@ -86,6 +131,10 @@ GET /api/auth/verify?token=abc123...
     "user": {
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "email": "trader@example.com",
+      "has_password": false,
+      "plan_type": "pro",
+      "plan_status": "beta_free",
+      "plan_selected_at": "2024-01-15T10:30:00Z",
       "created_at": "2024-01-15T10:30:00Z",
       "last_login": "2024-01-20T14:22:00Z"
     }

@@ -16,9 +16,10 @@
 		onDelete?: () => void;
 		onAddEntry?: (data: Partial<Entry>) => Promise<void>;
 		onAddExit?: (data: Partial<Exit>) => Promise<void>;
+		onCreateJournal?: () => void;
 	}
 
-	let { isOpen, onClose, trade, onEdit, onDelete, onAddEntry, onAddExit }: Props = $props();
+	let { isOpen, onClose, trade, onEdit, onDelete, onAddEntry, onAddExit, onCreateJournal }: Props = $props();
 
 	let showAddModal = $state(false);
 	let addModalAction = $state<'entry' | 'exit'>('entry');
@@ -311,19 +312,29 @@
 				</div>
 
 				<!-- Actions -->
-				<div class="p-6 border-t border-surface-200 dark:border-surface-700 flex gap-4">
-					{#if onEdit}
-						<Button color="primary" onclick={onEdit}>
-							<Icon icon="mdi:pencil" width="20" class="mr-2" />
-							Edit
-						</Button>
+				<div class="p-6 border-t border-surface-200 dark:border-surface-700">
+					{#if onCreateJournal}
+						<div class="mb-3">
+							<Button color="secondary" variant="soft" onclick={onCreateJournal} fullWidth>
+								<Icon icon="mdi:book-edit" width="20" class="mr-2" />
+								Create Journal Entry
+							</Button>
+						</div>
 					{/if}
-					{#if onDelete}
-						<Button color="error" onclick={onDelete}>
-							<Icon icon="mdi:delete" width="20" class="mr-2" />
-							Delete
-						</Button>
-					{/if}
+					<div class="flex gap-3">
+						{#if onEdit}
+							<Button color="primary" onclick={onEdit} fullWidth>
+								<Icon icon="mdi:pencil" width="20" class="mr-2" />
+								Edit
+							</Button>
+						{/if}
+						{#if onDelete}
+							<Button color="error" onclick={onDelete} fullWidth>
+								<Icon icon="mdi:delete" width="20" class="mr-2" />
+								Delete
+							</Button>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>

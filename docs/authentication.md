@@ -1,6 +1,6 @@
 # Authentication System
 
-**Last Updated:** November 16, 2025
+**Last Updated:** November 17, 2025
 
 ## Overview
 
@@ -8,10 +8,19 @@ TradePulse implements a dual authentication system allowing users to sign in via
 1. **Magic Link** (passwordless email verification)
 2. **Email/Password** (traditional credentials)
 
+The platform also supports a modern signup flow with plan selection, where users choose their subscription tier before creating their account. During the Beta period, all plans are free.
+
 ## User Flow
 
-### First-Time User
-1. Enter email → Receive magic link via email
+### First-Time User (Signup with Plan Selection)
+1. Choose plan (Starter $2.99, Pro $9.99, Premium $14.99) - **Currently Free during Beta**
+2. Enter email → Receive magic link via email
+3. Click magic link → Authenticated with JWT token and plan activated
+4. **Optional:** Set password in Settings → Account → Security
+5. Next login: Choose Magic Link OR Password
+
+### Alternative: Magic Link Without Plan Selection
+1. Enter email → Receive magic link via email (defaults to Starter plan)
 2. Click magic link → Authenticated with JWT token
 3. **Optional:** Set password in Settings → Account → Security
 4. Next login: Choose Magic Link OR Password
@@ -30,6 +39,7 @@ TradePulse implements a dual authentication system allowing users to sign in via
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
+| `/api/auth/signup` | POST | Public | Signup with plan selection |
 | `/api/auth/request-magic-link` | POST | Public | Request magic link email |
 | `/api/auth/verify` | GET | Public | Verify magic link token |
 | `/api/auth/login` | POST | Public | Email/password login |
@@ -52,6 +62,12 @@ TradePulse implements a dual authentication system allowing users to sign in via
 -- Migration 002: Password Authentication
 ALTER TABLE users ADD COLUMN password_hash TEXT;
 CREATE INDEX idx_users_email_password ON users(email) WHERE password_hash IS NOT NULL;
+
+-- Migration 003: User Plans
+ALTER TABLE users ADD COLUMN plan_type VARCHAR(50) DEFAULT 'starter';
+ALTER TABLE users ADD COLUMN plan_status VARCHAR(50) DEFAULT 'beta_free';
+ALTER TABLE users ADD COLUMN plan_selected_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+CREATE INDEX idx_users_plan_type ON users(plan_type);
 ```
 
 **User Model:**
@@ -59,14 +75,34 @@ CREATE INDEX idx_users_email_password ON users(email) WHERE password_hash IS NOT
 - `email` (string, unique)
 - `password_hash` (string, internal only)
 - `has_password` (boolean, sent to client)
+- `plan_type` (string: 'starter', 'pro', 'premium')
+- `plan_status` (string: 'beta_free', 'active', 'cancelled', 'trial', 'expired')
+- `plan_selected_at` (timestamp)
 - `created_at` (timestamp)
 - `last_login` (timestamp)
+- `preferences` (JSONB)
+
+### Plan System
+
+**Available Plans:**
+- **Starter** - $2.99/month (Free during Beta)
+- **Pro** - $9.99/month (Free during Beta)
+- **Premium** - $14.99/month (Free during Beta)
+
+**Beta Status:**
+All users during the Beta period have `plan_status = 'beta_free'`, meaning they get full access to their selected plan features without payment. This allows users to experience the platform before the official launch.
+
+**Plan Fields:**
+- `plan_type`: The selected subscription tier ('starter', 'pro', 'premium')
+- `plan_status`: Current plan status ('beta_free', 'active', 'cancelled', 'trial', 'expired')
+- `plan_selected_at`: Timestamp when the user selected their plan
 
 ### Auto-Migrations
 
 Migrations run automatically on server startup via `db.RunMigrations()`:
 - Migration 001: Initial schema (users, trades, tags, journal)
 - Migration 002: Password authentication
+- Migration 003: User plan fields
 
 ## Frontend Implementation
 

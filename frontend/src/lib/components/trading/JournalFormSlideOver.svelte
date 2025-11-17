@@ -186,10 +186,11 @@
 			/>
 
 			<div>
-				<label class="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
+				<label for="reflection-notes" class="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
 					Reflection & Notes *
 				</label>
 				<textarea
+					id="reflection-notes"
 					bind:value={content}
 					class="w-full px-4 py-3 rounded-xl border-2 transition-all duration-200
 						border-slate-200 dark:border-slate-700
@@ -318,10 +319,11 @@
 
 			<!-- Emotional notes -->
 			<div>
-				<label class="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
+				<label for="emotional-notes" class="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">
 					Emotional Notes
 				</label>
 				<textarea
+					id="emotional-notes"
 					bind:value={emotionalState.notes}
 					class="w-full px-4 py-3 rounded-xl border-2 transition-all duration-200
 						border-slate-200 dark:border-slate-700

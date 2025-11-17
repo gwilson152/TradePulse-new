@@ -41,6 +41,39 @@ func FetchPropReportsTrades(logger *slog.Logger) http.HandlerFunc {
 
 		logger.Info("Successfully fetched trades from PropReports", "site", input.Site, "username", input.Username, "count", len(trades))
 
+		// Log sample of trades for debugging
+		if len(trades) > 0 {
+			logger.Info("=== Sample of Imported Trades ===")
+			sampleSize := 5
+			if len(trades) < sampleSize {
+				sampleSize = len(trades)
+			}
+			for i := 0; i < sampleSize; i++ {
+				t := trades[i]
+				logger.Info("Trade Sample",
+					"index", i+1,
+					"symbol", t.Symbol,
+					"type", t.TradeType,
+					"quantity", t.Quantity,
+					"entry_price", t.EntryPrice,
+					"exit_price", t.ExitPrice,
+					"opened_at", t.OpenedAt.Format("2006-01-02 15:04:05"),
+					"closed_at", func() string {
+						if t.ClosedAt != nil {
+							return t.ClosedAt.Format("2006-01-02 15:04:05")
+						}
+						return "OPEN"
+					}(),
+					"pnl", t.PnL,
+					"fees", t.Fees,
+				)
+			}
+			if len(trades) > sampleSize {
+				logger.Info("... and more", "remaining", len(trades)-sampleSize)
+			}
+			logger.Info("=================================")
+		}
+
 		writeSuccess(w, http.StatusOK, trades)
 	}
 }

@@ -11,12 +11,19 @@
 
 ### users
 ```sql
-id          UUID PRIMARY KEY
-email       VARCHAR(255) UNIQUE NOT NULL
-created_at  TIMESTAMP WITH TIME ZONE
-last_login  TIMESTAMP WITH TIME ZONE
-preferences JSONB
+id              UUID PRIMARY KEY
+email           VARCHAR(255) UNIQUE NOT NULL
+password_hash   TEXT
+plan_type       VARCHAR(50) DEFAULT 'starter'
+plan_status     VARCHAR(50) DEFAULT 'beta_free'
+plan_selected_at TIMESTAMP WITH TIME ZONE
+created_at      TIMESTAMP WITH TIME ZONE
+last_login      TIMESTAMP WITH TIME ZONE
+preferences     JSONB
 ```
+
+**Plan Types:** 'starter', 'pro', 'premium'
+**Plan Statuses:** 'beta_free', 'active', 'cancelled', 'trial', 'expired'
 
 ### magic_links
 ```sql
@@ -91,6 +98,11 @@ PRIMARY KEY (trade_id, tag_id)
 
 See [migrations.md](./migrations.md) for complete migration documentation.
 
+**Available Migrations:**
+- `001_initial_schema` - Users, trades, journal entries, tags, attachments
+- `002_add_password_auth` - Password authentication support
+- `003_add_user_plans` - Plan type, status, and selection timestamp
+
 **Quick Start:**
 - Migrations run automatically on server start
 - VSCode Tasks: `Ctrl+Shift+P` → "Migrate Up" / "Migration Status"
@@ -162,6 +174,8 @@ Key indexes for performance:
 ```sql
 -- Users
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_plan_type ON users(plan_type);
+CREATE INDEX idx_users_email_password ON users(email) WHERE password_hash IS NOT NULL;
 
 -- Trades
 CREATE INDEX idx_trades_user_id ON trades(user_id);

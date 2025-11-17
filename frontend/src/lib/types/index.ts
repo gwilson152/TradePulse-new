@@ -45,6 +45,9 @@ export interface Trade {
 	closed_at: string | null;
 	created_at: string;
 	updated_at: string;
+	// Journal entries
+	journal_entries?: JournalEntry[];
+	has_journal?: boolean;
 }
 
 export interface JournalEntry {
@@ -73,6 +76,9 @@ export interface User {
 	id: string;
 	email: string;
 	has_password: boolean;
+	plan_type?: string;
+	plan_status?: string;
+	plan_selected_at?: string;
 	created_at: string;
 	last_login: string;
 }
