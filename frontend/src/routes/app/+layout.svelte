@@ -7,6 +7,8 @@
 	import UserMenu from '$lib/components/ui/UserMenu.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import UniversalSlideOver from '$lib/components/layout/UniversalSlideOver.svelte';
+	import ChartPortal from '$lib/components/layout/ChartPortal.svelte';
+	import ProfileSetupWizard from '$lib/components/onboarding/ProfileSetupWizard.svelte';
 	import { apiClient } from '$lib/api/client';
 	import { userStore, getUserInitials, getDisplayName } from '$lib/stores/user';
 	import type { User } from '$lib/types';
@@ -16,8 +18,18 @@
 	let isAuthenticated = $state(false);
 	let currentTime = $state(new Date());
 	let currentUser = $state<User | null>(null);
+	let showProfileWizard = $state(false);
+	let pendingReviewCount = $state(0);
+	let showReviewBanner = $state(false);
+	let reviewBannerDismissed = $state(false);
 
 	onMount(async () => {
+		// Check if review banner was dismissed
+		const dismissed = localStorage.getItem('reviewBannerDismissed');
+		if (dismissed === 'true') {
+			reviewBannerDismissed = true;
+		}
+
 		// Check if user has valid JWT token
 		const token = apiClient.getToken();
 		if (!token) {
@@ -30,6 +42,11 @@
 			const user = await apiClient.getCurrentUser();
 			currentUser = user;
 			userStore.setUser(user);
+
+			// Check if profile is complete
+			if (!user.profile_completed && !user.first_name) {
+				showProfileWizard = true;
+			}
 		} catch (error: any) {
 			// If authentication fails (401, 403, or user not found), redirect to login
 			if (error?.message?.includes('Failed to get user') ||
@@ -64,17 +81,58 @@
 
 		isAuthenticated = true;
 
+		// Check for pending reviews
+		checkPendingReviews();
+
 		// Update time every minute
 		const interval = setInterval(() => {
 			currentTime = new Date();
 		}, 60000);
 
-		return () => clearInterval(interval);
+		// Check for pending reviews every 5 minutes
+		const reviewInterval = setInterval(() => {
+			checkPendingReviews();
+		}, 300000);
+
+		return () => {
+			clearInterval(interval);
+			clearInterval(reviewInterval);
+		};
 	});
+
+	async function checkPendingReviews() {
+		try {
+			const response = await apiClient.getTrades({
+				status: 'closed',
+				limit: 100
+			});
+			const pending = response.data.filter(
+				(trade: any) => !trade.is_reviewed && !trade.review_skipped
+			);
+			pendingReviewCount = pending.length;
+
+			// Show banner if there are pending reviews, not dismissed, and we're not already on the review page
+			if (pendingReviewCount > 0 && !reviewBannerDismissed && !$page.url.pathname.includes('/review')) {
+				showReviewBanner = true;
+			} else {
+				showReviewBanner = false;
+			}
+		} catch (err) {
+			console.error('Failed to check pending reviews:', err);
+		}
+	}
+
+	function dismissReviewBanner() {
+		showReviewBanner = false;
+		reviewBannerDismissed = true;
+		localStorage.setItem('reviewBannerDismissed', 'true');
+	}
 
 	const navItems = [
 		{ href: '/app/dashboard', icon: 'mdi:view-dashboard-outline', label: 'Overview', color: 'text-blue-500' },
+		{ href: '/app/accounts', icon: 'mdi:bank-outline', label: 'Accounts', color: 'text-cyan-500' },
 		{ href: '/app/trades', icon: 'mdi:chart-line-variant', label: 'Trades', color: 'text-emerald-500' },
+		{ href: '/app/review', icon: 'mdi:clipboard-check-outline', label: 'Review', color: 'text-indigo-500' },
 		{ href: '/app/journal', icon: 'mdi:book-open-page-variant-outline', label: 'Journal', color: 'text-purple-500' },
 		{ href: '/app/rules', icon: 'mdi:checkbox-marked-circle-outline', label: 'Rules', color: 'text-pink-500' },
 		{ href: '/app/analytics', icon: 'mdi:chart-box-outline', label: 'Analytics', color: 'text-orange-500' },
@@ -101,6 +159,13 @@
 {#if isAuthenticated}
 	<Toast />
 	<UniversalSlideOver />
+	<ChartPortal />
+
+	<!-- Profile Setup Wizard -->
+	{#if showProfileWizard}
+		<ProfileSetupWizard onComplete={() => (showProfileWizard = false)} />
+	{/if}
+
 	<div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
 		<!-- Menu Bar (macOS-style) -->
 		<div class="fixed top-0 left-0 right-0 h-11 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 z-50 flex items-center justify-between px-4">
@@ -135,6 +200,41 @@
 
 		<!-- Main Content Area -->
 		<main class="pt-11 pb-24 px-8 h-screen overflow-y-auto">
+			<!-- Pending Reviews Banner -->
+			{#if showReviewBanner && pendingReviewCount > 0}
+				<div class="max-w-[1800px] mx-auto pt-6 px-0">
+					<div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl shadow-lg p-4 flex items-center justify-between">
+						<div class="flex items-center gap-4">
+							<div class="bg-white/20 p-3 rounded-lg">
+								<Icon icon="mdi:clipboard-check-outline" width="28" />
+							</div>
+							<div>
+								<h3 class="font-bold text-lg">Trade Reviews Pending</h3>
+								<p class="text-sm text-blue-50">
+									You have {pendingReviewCount} {pendingReviewCount === 1 ? 'trade' : 'trades'} waiting to be reviewed
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-3">
+							<button
+								onclick={() => goto('/app/review')}
+								class="bg-white text-blue-600 hover:bg-blue-50 px-6 py-2.5 rounded-lg font-semibold transition-colors flex items-center gap-2 shadow-md"
+							>
+								<Icon icon="mdi:play-circle" width="20" />
+								Start Reviewing
+							</button>
+							<button
+								onclick={dismissReviewBanner}
+								class="text-white/80 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+								title="Dismiss"
+							>
+								<Icon icon="mdi:close" width="24" />
+							</button>
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			<div class="max-w-[1800px] mx-auto py-8">
 				{@render children()}
 			</div>
