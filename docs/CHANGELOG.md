@@ -4,7 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Added
+### Added - November 19, 2025
+- 1-minute TradingView chart integration in journal view
+- Global chart portal for fullscreen chart viewing
+- Collapsible journal trade list with floating toggle
+- Trade information display in journal entry cards (symbol, P&L, win/loss)
+- Execution timeline with entry/exit details below charts
+- Chart maximize button for fullscreen overlay
+- ESC key and click-outside to close chart portal
+- Trade summary stats display (avg entry/exit, quantity, executions)
+
+### Added - November 18, 2025
+- Advanced position management with entries/exits tracking
+- Backend-calculated trade metrics (total quantities, average prices)
+- Migration 007 for calculated trade fields
+- Proper P&L calculation for LONG vs SHORT trades
+- User profile management with Migration 006
+- Profile setup wizard (4-step onboarding)
+- Trade review system with pending review banner
+- Delete trade functionality with confirmation
 - Signup with plan selection (Starter, Pro, Premium)
 - Beta free status for all users (all plans free during Beta)
 - Plan management system with database fields
@@ -21,14 +39,37 @@ All notable changes to this project will be documented in this file.
 - Live result counts in filter panel
 - Settings store with localStorage persistence
 
-### Changed
+### Changed - November 19, 2025
+- Journal entry cards now show trade details instead of just content
+- Chart preview uses TradingView iframe instead of custom implementation
+- Journal page redesigned as split-view layout
+- Archived deprecated documentation files to `docs/archive/`
+
+### Changed - November 18, 2025
+- P&L calculation now based on entries/exits, not legacy fields
+- Position size for closed trades uses `total_entry_quantity`
+- Trade list and review page use backend-calculated metrics
+- BulkCreateTrades now calls recalculateTradeMetrics after import
 - Trades list now uses server-side pagination
 - All filters processed at database level for performance
 - Date/time display supports multiple timezones
 - Pagination controls show server-provided metadata
 - User model includes plan_type, plan_status, plan_selected_at fields
 
-### Fixed
+### Fixed - November 19, 2025
+- Journal entry selection now properly loads trade data
+- Date formatting handles null/invalid timestamps gracefully
+- ChartPortal infinite loop fixed (using .subscribe instead of $effect)
+- TradingView initWidget errors removed (simplified to iframe only)
+
+### Fixed - November 18, 2025
+- getTrade API method added to frontend client
+- Rule set creation modal submission issues
+- Share size display for closed trades (now loads entries/exits)
+- PropReports integration creates entries/exits properly
+- Account reset table name error (attachments vs journal_attachments)
+- Duplicate detection after schema refactor
+- Review wizard position size calculation (using $derived.by)
 - Svelte 5 `{@const}` tag placement issues
 - Accessibility warnings for labels and interactive elements
 - Reactive effect infinite loops

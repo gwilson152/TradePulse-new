@@ -1,11 +1,15 @@
 # TradePulse Documentation
 
 **Version:** 2.0
-**Last Updated:** January 2025
+**Last Updated:** November 2025
 **Status:** Active Development
+
+> **📚 New to the docs?** Check the [Documentation Index](DOCUMENTATION-INDEX.md) for a complete guide to finding what you need.
 
 ## Quick Links
 
+- **[📚 Documentation Index](DOCUMENTATION-INDEX.md)** - Complete navigation guide
+- **[✅ Backend Status](backend/implementation-status.md)** - Current implementation state
 - [Project Overview](./project.md)
 - [Architecture](./architecture.md)
 - [API Specification](./api-spec.md)

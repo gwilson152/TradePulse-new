@@ -2,7 +2,7 @@
 
 This document tracks the implementation status of all API endpoints and features to prevent confusion between documentation and reality.
 
-**Last Updated:** November 17, 2025
+**Last Updated:** November 18, 2025 (Session 4 - Chart Integration)
 
 ## Implementation Legend
 
@@ -10,6 +10,180 @@ This document tracks the implementation status of all API endpoints and features
 - 🚧 **In Progress** - Partially implemented or being worked on
 - 📋 **Planned** - Designed but not yet implemented
 - ❌ **Not Planned** - Not in current roadmap
+
+---
+
+## 📝 November 18, 2025 Session 4 - Chart Integration & Journal Enhancements
+
+**Status:** Completed
+
+### Changes Made
+
+**1. TradingView Chart Integration**
+- ✅ Created ChartPreview component with TradingView iframe embed
+- ✅ Displays 1-minute candlestick charts for trades
+- ✅ Shows execution timeline with entry/exit timestamps and prices
+- ✅ Collapsible timeline section to save space
+- ✅ Custom green/red candle colors
+- **Files:** `frontend/src/lib/components/charts/ChartPreview.svelte`
+
+**2. Global Chart Portal System**
+- ✅ Created reusable chart portal accessible from any page
+- ✅ Store-based state management (`chartPortal` store)
+- ✅ Fullscreen chart overlay covering entire viewport
+- ✅ Keyboard support (ESC to close)
+- ✅ Click backdrop to close, click chart to keep open
+- **Files:**
+  - `frontend/src/lib/stores/chartPortal.ts`
+  - `frontend/src/lib/components/layout/ChartPortal.svelte`
+  - `frontend/src/routes/app/+layout.svelte` (added portal)
+
+**3. Journal Page Enhancements**
+- ✅ Redesigned as split-view layout (list on left, detail on right)
+- ✅ Collapsible journal list with floating toggle button
+- ✅ Auto-loads first entry and associated trade data
+- ✅ Integrated ChartPreview for trade visualization
+- ✅ Fixed date formatting with proper error handling
+- ✅ Fixed trade data loading on entry selection
+- **Files:** `frontend/src/routes/app/journal/+page.svelte`
+
+**4. API Client Updates**
+- ✅ Added `getTradeChartData()` method (for future chart data endpoint)
+- ✅ Updated journal entry methods
+- **Files:** `frontend/src/lib/api/client.ts`
+
+**Technical Decisions:**
+- Used TradingView iframe embed instead of widget API (more reliable, no JavaScript errors)
+- Avoided programmatic marker placement (not available in free TradingView embed)
+- Timeline view shows all entry/exit details below chart
+- Portal renders at document body level using Svelte reactivity
+
+**Known Limitations:**
+- TradingView free embed doesn't support programmatic shape/marker placement
+- Charts load with current market data, not historical trade timeframe
+- Manual drawing tools available in TradingView UI for annotations
+
+---
+
+## 📝 November 18, 2025 Session 2 - Backend Position Calculations & P&L Fixes
+
+**Status:** Completed
+
+### Changes Made
+
+**1. Backend-Calculated Trade Metrics**
+- ✅ Added calculated fields to Trade model: `TotalEntryQuantity`, `TotalExitQuantity`, `AverageExitPrice`
+- ✅ Migration 007: Added columns to trades table with backfill for existing data
+- ✅ Updated `recalculateTradeMetrics()` to calculate P&L from entries/exits (not just sum existing values)
+- ✅ Fixed P&L calculation for LONG vs SHORT trades with proper formulas
+- ✅ Updated `GetTrade()` and `ListTrades()` queries to include new calculated fields
+- **Why:** Single source of truth, better performance, data integrity
+
+**2. Fixed Realized P&L Calculation**
+- ✅ Updated `recalculateTradeMetrics()` to actually calculate P&L instead of summing zero values from imports
+- ✅ Query trade type for proper LONG/SHORT P&L formulas
+- ✅ Calculate: `exitValue - entryCost - fees` (LONG) or `entryCost - exitValue - fees` (SHORT)
+- **Issue:** CSV imports set exit P&L to 0, then recalculation just summed those zeros
+
+**3. Fixed Review Page Display Issues**
+- ✅ Fixed `totalPositionSize` in TradeReviewWizard using `$derived.by()` instead of `$derived(() => {})`
+- ✅ Changed template from `{totalPositionSize()}` to `{totalPositionSize}` (not a function call)
+- ✅ Updated review list page to use `total_entry_quantity` instead of `current_position_size`
+- **Why:** Svelte 5 runes syntax requires `$derived.by()` for complex computations
+
+**4. Database Query Updates**
+- ✅ `BulkCreateTrades()` now calls `recalculateTradeMetrics()` after inserting entries/exits
+- ✅ `ListTrades()` and `GetTrade()` SELECT new calculated fields
+- ✅ All trade queries return `total_entry_quantity`, `total_exit_quantity`, `average_exit_price`
+
+**Files Modified:**
+- `backend/internal/models/trade.go` - Added TotalEntryQuantity, TotalExitQuantity, AverageExitPrice
+- `backend/internal/database/entries.go` - Complete rewrite of recalculateTradeMetrics with P&L calculation
+- `backend/internal/database/trades.go` - Updated queries, added recalculation to BulkCreateTrades
+- `backend/migrations/007_add_calculated_trade_fields.*.sql` - New calculated columns (NEW)
+- `frontend/src/lib/types.ts` - Added new fields to Trade interface
+- `frontend/src/routes/app/trades/+page.svelte` - Use backend-calculated fields
+- `frontend/src/routes/app/review/+page.svelte` - Use total_entry_quantity for position size
+- `frontend/src/lib/components/trading/TradeReviewWizard.svelte` - Fixed $derived.by() usage
+
+**Technical Details:**
+- Position size for closed trades: Use `total_entry_quantity` (historical total), not `current_position_size` (0 when closed)
+- P&L calculation: `(totalCost / totalQuantity) * exitQuantity` = cost basis for exits
+- Svelte 5 pattern: `$derived.by(() => { ... })` for complex reactive values, use without `()`
+
+---
+
+## 📝 November 18, 2025 Session 1 - Bug Fixes & Improvements
+
+**Status:** Completed
+
+### Changes Made
+
+**1. Fixed getTrade API Method**
+- ✅ Added missing `getTrade(id)` method to frontend API client (`frontend/src/lib/api/client.ts`)
+- Used by review page to load full trade details with entries/exits
+
+**2. Fixed Rule Set Creation**
+- ✅ Changed modal submit buttons from form-based to direct onclick handlers
+- ✅ Added client-side validation for required fields
+- ✅ Fixed Rules array initialization (empty array instead of null)
+- ✅ Fixed rule handlers to use `chi.URLParam()` instead of query params
+- Issue: Svelte 5 snippet boundaries preventing form submission across modal sections
+
+**3. Fixed Share Size Display**
+- ✅ Updated `ListTrades()` to load entries and exits for each trade
+- ✅ Frontend now properly calculates share count from entries array
+- Fixes "0 shares" showing for closed trades
+
+**4. Fixed PropReports Integration**
+- ✅ Updated `processFillsForSymbol()` to create entries and exits
+- ✅ Calculate average entry price and realized P&L
+- ✅ Set proper field types (float64 for quantities, pointer for avg entry price)
+- Compatible with advanced position management system
+
+**5. User Profile Management**
+- ✅ Migration 006: Added user profile fields (name, phone, address, timezone)
+- ✅ Created `UpdateUserProfile()` database function
+- ✅ Created `UsersHandler` with profile update endpoint
+- ✅ Implemented profile setup wizard (4 steps with address collection)
+- ✅ Fixed z-index hierarchy (modals at z-[100], nav at z-50)
+- ✅ Added `updateProfile()` to API client
+
+**6. Trade Review System**
+- ✅ Added review page link to main navigation
+- ✅ Implemented pending review counter and banner
+- ✅ Auto-prompt for unreviewed trades (checks every 5 minutes)
+- ✅ Review wizard accessible from trades list and review page
+- ✅ Fixed position size calculation (sum entries for closed trades)
+
+**7. Minor Fixes**
+- ✅ Fixed account reset error (table name: `attachments` not `journal_attachments`)
+- ✅ Implemented delete trade functionality with confirmation
+- ✅ Added formatPrice() for penny stocks (4 decimals under $1)
+- ✅ Fixed duplicate detection after schema refactor
+- ✅ Added null-safe checks for rules array access
+
+**Files Modified:**
+- `backend/internal/database/rulesets.go` - Initialize empty rules array
+- `backend/internal/database/trades.go` - Load entries/exits in ListTrades
+- `backend/internal/database/users.go` - Profile management
+- `backend/internal/handlers/handlers.go` - Fix chi.URLParam usage for rules
+- `backend/internal/handlers/users.go` - Profile update handler (NEW)
+- `backend/internal/handlers/account.go` - Fix table name
+- `backend/internal/integrations/propreports.go` - Advanced tracking support
+- `backend/internal/models/user.go` - Profile fields
+- `backend/migrations/006_add_user_profile.*.sql` - Profile schema (NEW)
+- `frontend/src/lib/api/client.ts` - getTrade, updateProfile methods
+- `frontend/src/lib/utils/formatting.ts` - formatPrice for penny stocks
+- `frontend/src/routes/app/+layout.svelte` - Review banner, navigation
+- `frontend/src/routes/app/review/+page.svelte` - Load full trade details
+- `frontend/src/routes/app/rules/+page.svelte` - Fix modal submission
+- `frontend/src/routes/app/trades/+page.svelte` - Delete, review, share count
+- `frontend/src/lib/components/onboarding/ProfileSetupWizard.svelte` - Full implementation
+- `frontend/src/lib/components/trading/TradeReviewWizard.svelte` - Position size fix
+
+**Known Issues Deferred:**
+- Journal code deduplication between review and journal pages (large refactor, needs separate task)
 
 ---
 
@@ -103,6 +277,12 @@ Implemented database-level pagination for the trades API to handle large dataset
 | `/api/auth/logout` | POST | ✅ | Client-side logout |
 | `/api/auth/refresh` | POST | 📋 | JWT refresh token mechanism |
 
+### User Profile
+
+| Endpoint | Method | Status | Notes |
+|----------|--------|--------|-------|
+| `/api/users/profile` | PUT | ✅ | Update user profile (name, phone, address, timezone) |
+
 **Features:**
 - ✅ Dual authentication: Magic Link OR Email/Password
 - ✅ Signup with plan selection (Starter, Pro, Premium)
@@ -186,37 +366,126 @@ Implemented database-level pagination for the trades API to handle large dataset
 
 ### Trades - Advanced Position Management
 
+**Status:** ✅ Fully Implemented (January 2025)
+
 | Endpoint | Method | Status | Notes |
 |----------|--------|--------|-------|
-| `/api/trades/{id}/entries` | POST | 📋 | Add entry execution to position |
-| `/api/trades/{id}/entries/{entryId}` | DELETE | 📋 | Remove entry execution |
-| `/api/trades/{id}/exits` | POST | 📋 | Add exit execution to position |
-| `/api/trades/{id}/exits/{exitId}` | DELETE | 📋 | Remove exit execution |
+| `/api/trades/{id}/entries` | GET | ✅ | List all entries for a trade |
+| `/api/trades/{id}/entries` | POST | ✅ | Add entry execution to position |
+| `/api/trades/{id}/entries/{entryId}` | DELETE | ✅ | Remove entry execution |
+| `/api/trades/{id}/exits` | GET | ✅ | List all exits for a trade |
+| `/api/trades/{id}/exits` | POST | ✅ | Add exit execution to position |
+| `/api/trades/{id}/exits/{exitId}` | DELETE | ✅ | Remove exit execution |
+
+**Database Schema:**
+- ✅ Migration 005: Advanced position management
+  - `trade_entries` table with price, quantity, timestamp, fees
+  - `trade_exits` table with price, quantity, timestamp, fees, pnl
+  - Cost basis methods: FIFO, LIFO, Average
+  - Automatic metric recalculation on entry/exit changes
+  - Position auto-closes when current_position_size reaches zero
+
+**Database Functions:**
+- ✅ `CreateEntry()` - Add entry with transaction and metric recalculation
+- ✅ `GetEntriesByTradeID()` - List all entries for a trade
+- ✅ `DeleteEntry()` - Remove entry with metric recalculation
+- ✅ `CreateExit()` - Add exit with P&L calculation and metric recalculation
+- ✅ `GetExitsByTradeID()` - List all exits for a trade
+- ✅ `DeleteExit()` - Remove exit with metric recalculation
+- ✅ `calculateExitPnL()` - Cost basis calculation (FIFO/LIFO/Average)
+- ✅ `recalculateTradeMetrics()` - Recalculate all trade metrics from entries/exits
+
+**API Handlers:**
+- ✅ `CreateEntry()` - Handler with trade ownership verification
+- ✅ `ListEntries()` - Handler with trade ownership verification
+- ✅ `DeleteEntry()` - Handler with trade ownership verification
+- ✅ `CreateExit()` - Handler with trade ownership verification
+- ✅ `ListExits()` - Handler with trade ownership verification
+- ✅ `DeleteExit()` - Handler with trade ownership verification
+- ✅ WebSocket notifications on all entry/exit operations
+- ✅ Dropped old trades table structure (quantity, entry_price, exit_price, pnl, fees)
+- ✅ New trades table with: current_position_size, average_entry_price, total_fees, realized_pnl, unrealized_pnl
+- ✅ Created `trade_entries` table for entry executions
+- ✅ Created `trade_exits` table for exit executions with P&L tracking
+- ✅ Cost basis method support (FIFO, LIFO, Average)
+- ✅ Review tracking fields (is_reviewed, review_skipped)
+- ✅ Updated journal_entries with: entry_date, rule_adherence (JSONB), adherence_score, is_primary, parent_entry_id
+
+**Database Functions:**
+- ✅ `CreateEntry()` - Adds entry with transaction and metric recalculation
+- ✅ `GetEntriesByTradeID()` - Lists entries for a trade
+- ✅ `DeleteEntry()` - Removes entry with metric recalculation
+- ✅ `CreateExit()` - Adds exit with cost basis P&L calculation
+- ✅ `GetExitsByTradeID()` - Lists exits for a trade
+- ✅ `DeleteExit()` - Removes exit with metric recalculation
+- ✅ `recalculateTradeMetrics()` - Updates trade from entries/exits
+- ✅ `calculateExitPnL()` - FIFO/LIFO/Average cost basis P&L
+
+**Features:**
+- ✅ Multiple entries and exits per trade (e.g., buy 100, sell 25, 25, 50)
+- ✅ Auto-calculation of average entry price from all entries
+- ✅ Auto-calculation of realized P&L from all exits
+- ✅ Cost basis method selection (FIFO, LIFO, Average)
+- ✅ Automatic trade closure when position size reaches zero
+- ✅ Transaction-wrapped operations for data consistency
+- ✅ Proportional fee allocation across entries/exits
+
+**Journal Entry Enhancements:**
+- ✅ Primary journal entry per trade (is_primary=true)
+- ✅ Optional sub-entries linked via parent_entry_id
+- ✅ Rule adherence tracking (JSONB array of RuleAdherence)
+- ✅ Adherence score calculation
+- ✅ Entry date field for backdated journals
+
+**API Handlers:**
+- ✅ Entry/exit handlers implemented (entries_exits.go)
+- ✅ Routes wired up in main.go
+- ✅ Trade model updated with Entries[] and Exits[] arrays
+- ✅ GetTrade() populates entries and exits
+- ✅ WebSocket notifications for entry/exit changes
 
 **Notes:**
-- Current implementation uses simple `entry_price` and `exit_price` fields
-- Advanced position management with `entries[]` and `exits[]` arrays is documented in api-spec.md but NOT implemented
-- This would require additional database tables (`trade_entries`, `trade_exits`)
-- Planned for Phase 2
+- ✅ PropReports integration updated (Nov 18, 2025) to create entries/exits
+- ✅ CSV import (DAS Trader) working with advanced tracking
+- ✅ Backward-incompatible change - old trade data will need migration
 
 ### Journal Entries
 
 | Endpoint | Method | Status | Notes |
 |----------|--------|--------|-------|
-| `/api/journal` | GET | ❌ | List journal entries |
-| `/api/journal` | POST | ❌ | Create journal entry |
-| `/api/journal/{id}` | GET | ❌ | Get single journal entry |
-| `/api/journal/{id}` | PUT | ❌ | Update journal entry |
-| `/api/journal/{id}` | DELETE | ❌ | Delete journal entry |
+| `/api/journal` | GET | 🚧 | List journal entries |
+| `/api/journal` | POST | 🚧 | Create journal entry |
+| `/api/journal/{id}` | GET | 🚧 | Get single journal entry |
+| `/api/journal/{id}` | PUT | 🚧 | Update journal entry |
+| `/api/journal/{id}` | DELETE | 🚧 | Delete journal entry |
 
-**Status:** Handlers stubbed, database functions not implemented
+**Status:** Database functions implemented, handlers need wiring
 
-**Database Schema:** ✅ Table exists with emotional state, content, trading rules
+**Database Schema:**
+- ✅ Table exists with emotional state, content, trading rules
+- ✅ Enhanced with rule_adherence (JSONB), adherence_score, is_primary, parent_entry_id, entry_date
+
+**Database Functions:**
+- ✅ `CreateJournalEntry()` - With rule adherence and primary entry support
+- ✅ `GetJournalEntry()` - Includes attachments and rule adherence
+- ✅ `ListJournalEntries()` - Paginated with rule adherence deserialization
+- ✅ `UpdateJournalEntry()` - Updates all fields including rule adherence
+- ✅ `DeleteJournalEntry()` - Removes entry
+- ✅ `GetJournalEntriesByTradeID()` - Lists entries for a trade (primary first)
+- ✅ `GetAttachmentsByEntryID()` - Lists attachments for an entry
+- ✅ `CreateAttachment()` - Creates attachment record
+- ✅ `GetAttachment()` - Retrieves single attachment
+- ✅ `DeleteAttachment()` - Removes attachment
+
+**Models:**
+- ✅ `JournalEntry` with all new fields
+- ✅ `RuleAdherence` struct for JSONB serialization
+- ✅ `Attachment` model
 
 **Next Steps:**
-- Create `internal/database/journals.go`
-- Create `internal/handlers/journals.go`
-- Wire up routes (similar pattern to trades)
+- ⚠️ Wire up journal handlers (currently stubbed)
+- ⚠️ Create entry/exit API handlers
+- ⚠️ Update API routes
 
 ### Attachments
 
@@ -317,13 +586,15 @@ Implemented database-level pagination for the trades API to handle large dataset
 |-------|--------|-------|
 | `users` | ✅ | User accounts with email, preferences (JSONB) |
 | `magic_links` | ✅ | Authentication tokens with expiry |
-| `trades` | ✅ | Core trading data with auto P&L calculation |
-| `journal_entries` | ✅ | Trade journals with emotional state (JSONB) |
+| `trades` | ✅ | Advanced position management with metrics calculated from entries/exits |
+| `trade_entries` | ✅ | Individual entry executions with timestamp, price, quantity, fees |
+| `trade_exits` | ✅ | Individual exit executions with P&L tracking |
+| `journal_entries` | ✅ | Trade journals with rule adherence, primary/sub-entry support |
 | `attachments` | ✅ | Screenshots and voice notes metadata |
 | `tags` | ✅ | User-defined tags with colors |
 | `trade_tags` | ✅ | Junction table for trade-tag relationships |
-| `trade_entries` | 📋 | Individual entry executions (planned) |
-| `trade_exits` | 📋 | Individual exit executions (planned) |
+| `rule_sets` | ✅ | Trading rule sets with activation status |
+| `rules` | ✅ | Individual rules with phase, category, weight |
 
 **Features:**
 - ✅ UUID primary keys (pgcrypto extension)
@@ -340,6 +611,9 @@ Implemented database-level pagination for the trades API to handle large dataset
 | `001_initial_schema` | ✅ | All tables, indexes, functions, triggers |
 | `002_add_password_auth` | ✅ | Password authentication support |
 | `003_add_user_plans` | ✅ | Plan type, status, selection timestamp with constraints |
+| `004_add_rulesets` | ✅ | Rule sets and rules tables with phase/category enums |
+| `005_advanced_position_management` | ✅ | Trades rebuild, entries/exits tables, journal enhancements |
+| `006_add_user_profile` | ✅ | User profile fields (name, phone, address, timezone, profile_completed) |
 
 **Migration System:**
 - ✅ Using [golang-migrate](https://github.com/golang-migrate/migrate) (industry standard)
@@ -357,14 +631,15 @@ Implemented database-level pagination for the trades API to handle large dataset
 - ✅ `GetUserByID()`
 - ✅ `CreateUser()`
 - ✅ `UpdateUserLastLogin()`
+- ✅ `UpdateUserProfile()` - Updates profile fields
 
 **Magic Links:**
 - ✅ `StoreMagicLinkToken()`
 - ✅ `VerifyMagicLinkToken()`
 
 **Trades:**
-- ✅ `ListTrades()` with filters
-- ✅ `GetTrade()`
+- ✅ `ListTrades()` with filters (loads entries/exits)
+- ✅ `GetTrade()` (loads entries/exits)
 - ✅ `CreateTrade()`
 - ✅ `UpdateTrade()`
 - ✅ `DeleteTrade()`
@@ -372,7 +647,31 @@ Implemented database-level pagination for the trades API to handle large dataset
 - ✅ `AddTagToTrade()`
 - ✅ `RemoveTagFromTrade()`
 
-**Journals:** ❌ Not implemented
+**Journals:**
+- ✅ `CreateJournalEntry()` with rule adherence
+- ✅ `GetJournalEntry()` with attachments
+- ✅ `ListJournalEntries()` with pagination
+- ✅ `UpdateJournalEntry()` with rule adherence
+- ✅ `DeleteJournalEntry()`
+- ✅ `GetJournalEntriesByTradeID()`
+
+**Entries/Exits:**
+- ✅ `CreateEntry()` with recalculation
+- ✅ `GetEntriesByTradeID()`
+- ✅ `DeleteEntry()` with recalculation
+- ✅ `CreateExit()` with cost basis P&L
+- ✅ `GetExitsByTradeID()`
+- ✅ `DeleteExit()` with recalculation
+
+**Rule Sets:**
+- ✅ `CreateRuleSet()` - Initializes empty rules array
+- ✅ `GetRuleSet()` - Populates rules
+- ✅ `ListRuleSets()` - Populates rules for each set
+- ✅ `UpdateRuleSet()`
+- ✅ `DeleteRuleSet()`
+- ✅ `CreateRule()` - Uses chi.URLParam for route params
+- ✅ `UpdateRule()` - Uses chi.URLParam for route params
+- ✅ `DeleteRule()` - Uses chi.URLParam for route params
 
 **Tags:** ❌ Not implemented
 
@@ -488,11 +787,11 @@ Implemented database-level pagination for the trades API to handle large dataset
 ## Known Issues & Limitations
 
 1. **Email Sending**: Magic links are generated but emails are not sent (logs to console instead)
-2. **Simple Trade Model**: Current implementation uses single entry/exit prices instead of execution arrays
-3. **No Tests**: Zero test coverage currently
-4. **No Rate Limiting**: API has no rate limiting protection
-5. **No Validation Layer**: Request validation is basic, needs improvement
-6. **No Caching**: Metrics queries could benefit from caching layer
+2. **No Tests**: Zero test coverage currently
+3. **No Rate Limiting**: API has no rate limiting protection
+4. **No Validation Layer**: Request validation is basic, needs improvement
+5. **No Caching**: Metrics queries could benefit from caching layer
+6. **Journal Deduplication**: Review wizard and journal page have duplicate code (needs refactoring)
 
 ---
 
